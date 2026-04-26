@@ -2,7 +2,7 @@ import avatarImg from './assets/avatar.png';
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-const BACKEND_URL = 'http://127.0.0.1:8000';
+const BACKEND_URL = 'https://diksha-chatbot-backend.onrender.com';
 
 const LANGUAGES = [
   { code: 'en', label: 'English',  native: 'English' },
