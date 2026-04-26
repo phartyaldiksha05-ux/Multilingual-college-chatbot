@@ -2,7 +2,7 @@ import os
 import json
 import glob
 import re
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_community.vectorstores import FAISS
 from groq import Groq
 from dotenv import load_dotenv
@@ -41,23 +41,15 @@ def load_qa_database():
 
 def get_vectorstore():
     global _vs_cache
-    # ✅ If already set by main.py, reuse it (saves ~400MB RAM)
-    if _vs_cache is not None:
-        return _vs_cache
-
-    # Fallback: load independently only if not set by main.py
-    print("[DB] Loading FAISS independently (fallback)...")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True}
-    )
-    index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
-    _vs_cache  = FAISS.load_local(
-        index_path, embeddings,
-        allow_dangerous_deserialization=True
-    )
-    print("[DB] FAISS loaded")
+    if _vs_cache is None:
+        from langchain_community.embeddings import FastEmbedEmbeddings
+        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+        _vs_cache = FAISS.load_local(
+            index_path, embeddings,
+            allow_dangerous_deserialization=True
+        )
+        print("[DB] FAISS loaded")
     return _vs_cache
 
 
