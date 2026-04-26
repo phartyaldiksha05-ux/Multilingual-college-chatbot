@@ -10,7 +10,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import List, Optional
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 from language_detector import detect_language
@@ -18,6 +17,11 @@ from kb_query import get_answer
 from voice import generate_voice
 
 load_dotenv()
+
+if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
+    print("FAISS index not found, building...")
+    from kb_setup import build_knowledge_base
+    build_knowledge_base()
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 
@@ -31,9 +35,6 @@ app.add_middleware(
 chat_sessions = {}
 vectorstore   = None
 
-# ══════════════════════════════════════════════
-#   VISIT COUNTER
-# ══════════════════════════════════════════════
 visit_data = {
     "total_visits": 0,
     "unique_ips": set(),
@@ -45,8 +46,7 @@ visit_data = {
     "user_count": 0
 }
 
-REPORT_EMAIL       = "bishtsuraj0311@gmail.com"
-VISIT_REPORT_EVERY = 10
+REPORT_EMAIL = "bishtsuraj0311@gmail.com"
 
 
 def send_visit_report():
@@ -66,32 +66,27 @@ def send_visit_report():
     )
 
     body = f"""
-नमस्ते,
+Diksha Chatbot Visit Report:
 
-Diksha Chatbot की Latest Visit Report:
+Total Visits     : {visit_data["total_visits"]}
+Chatbot Usage    : {visit_data["chatbot_usage"]}
+Unique Visitors  : {len(visit_data["unique_ips"])}
+New Users        : {visit_data["user_count"]}
+Today Visits     : {visit_data["daily_counts"].get(today, 0)}
+First Visit      : {visit_data["first_visit"]}
+Last Visit       : {visit_data["last_visit"]}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  कुल Visits         : {visit_data["total_visits"]}
-  💬 Chatbot Usage   : {visit_data["chatbot_usage"]}
-  Unique Visitors    : {len(visit_data["unique_ips"])}
-  नए Chatbot Users  : {visit_data["user_count"]}
-  आज की Visits      : {visit_data["daily_counts"].get(today, 0)}
-  पहली Visit        : {visit_data["first_visit"]}
-  आखिरी Visit       : {visit_data["last_visit"]}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-पिछले 7 दिन:
+Last 7 days:
 {daily_table}
 
 Report Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-— Diksha Bot 🤖 | GBPIET
+— Diksha Bot | GBPIET
 """
 
     msg = MIMEMultipart()
     msg["From"]    = sender_email
     msg["To"]      = REPORT_EMAIL
-    msg["Subject"] = f"Diksha Report — {visit_data['user_count']} Users, {visit_data['total_visits']} Visits"
+    msg["Subject"] = f"Diksha Report — {visit_data['user_count']} Users"
     msg.attach(MIMEText(body, "plain"))
 
     try:
@@ -100,9 +95,9 @@ Report Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             server.starttls()
             server.login(sender_email, sender_pass)
             server.sendmail(sender_email, REPORT_EMAIL, msg.as_string())
-        print(f"[VisitCounter] ✅ Email sent to {REPORT_EMAIL}")
+        print(f"[VisitCounter] Email sent to {REPORT_EMAIL}")
     except Exception as e:
-        print(f"[VisitCounter] ❌ Email failed: {e}")
+        print(f"[VisitCounter] Email failed: {e}")
 
 
 def record_visit(ip: str):
@@ -125,42 +120,31 @@ def record_visit(ip: str):
             send_visit_report()
 
 
-# ══════════════════════════════════════════════
-#   STARTUP — FAISS loads in background thread
-#   so port opens immediately (fixes Render timeout)
-# ══════════════════════════════════════════════
 def load_faiss_background():
     global vectorstore
     try:
         print("Loading FAISS index in background...")
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"},
-            encode_kwargs={"normalize_embeddings": True}
-        )
+        from langchain_community.embeddings import FastEmbedEmbeddings
+        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
         vectorstore = FAISS.load_local(
             index_path, embeddings,
             allow_dangerous_deserialization=True
         )
-        # ✅ Share with kb_query so it doesn't reload embeddings again
         import kb_query
         kb_query._vs_cache = vectorstore
-        print("✅ Diksha is ready!")
+        print("Diksha is ready!")
     except Exception as e:
-        print(f"❌ FAISS load error: {e}")
+        print(f"FAISS load error: {e}")
 
 
 @app.on_event("startup")
 async def startup_event():
     thread = threading.Thread(target=load_faiss_background, daemon=True)
     thread.start()
-    print("🚀 Server started! FAISS loading in background...")
+    print("Server started! FAISS loading in background...")
 
 
-# ══════════════════════════════════════════════
-#   MODELS
-# ══════════════════════════════════════════════
 class TTSRequest(BaseModel):
     text: str
     lang: str = "en"
@@ -182,9 +166,6 @@ class HistoryResponse(BaseModel):
     messages:   List[dict]
 
 
-# ══════════════════════════════════════════════
-#   ROUTES
-# ══════════════════════════════════════════════
 @app.get("/")
 def home():
     return {"chatbot": "Diksha", "status": "running"}
@@ -201,11 +182,8 @@ async def tts_endpoint(request: TTSRequest):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, req: Request):
-
-    # ✅ FIX: extract question from request object
     question = request.question.strip()
 
-    # Return friendly message while FAISS is still loading
     if vectorstore is None:
         return ChatResponse(
             answer="Diksha is starting up, please wait 30 seconds and try again!",
@@ -213,24 +191,21 @@ async def chat(request: ChatRequest, req: Request):
             session_id=request.session_id or str(uuid.uuid4())
         )
 
-    # IP extraction
     forwarded = req.headers.get("x-forwarded-for")
     ip = forwarded.split(",")[0].strip() if forwarded else req.client.host
 
     record_visit(ip)
     visit_data["chatbot_usage"] += 1
 
-    # Language detection
     if request.language and request.language in ['en', 'hi', 'ga', 'ku']:
         lang = request.language
     else:
-        lang = detect_language(question)   # ✅ FIX: was using undefined 'question'
+        lang = detect_language(question)
 
     session_id = request.session_id or str(uuid.uuid4())
     if session_id not in chat_sessions:
         chat_sessions[session_id] = []
 
-    # Build history
     history_text = ""
     if chat_sessions[session_id]:
         history_text = "Previous conversation:\n"
@@ -282,8 +257,4 @@ def get_visit_stats():
 @app.get("/admin/send-report")
 def send_report_now():
     send_visit_report()
-    return {
-        "status":       "✅ Report sent",
-        "to":           REPORT_EMAIL,
-        "unique_users": len(visit_data["unique_ips"])
-    }
+    return {"status": "Report sent", "to": REPORT_EMAIL}
