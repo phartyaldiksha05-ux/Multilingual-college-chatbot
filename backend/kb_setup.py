@@ -1,7 +1,7 @@
 import json
 import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
@@ -115,12 +115,7 @@ Answer: {a}
 
     # 🔥 MULTILINGUAL MODEL (VERY IMPORTANT FIX)
     print("\nCreating embeddings... (first time may take time)")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True}
-    )
-
+    embeddings = FastEmbedEmbeddings()
     print("Building FAISS index...")
     vectorstore = FAISS.from_documents(chunks, embeddings)
 
