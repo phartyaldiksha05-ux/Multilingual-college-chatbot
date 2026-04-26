@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request          # ← Request add करो
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import os
 import uuid
+import threading
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -31,7 +32,7 @@ chat_sessions = {}
 vectorstore   = None
 
 # ══════════════════════════════════════════════
-#   VISIT COUNTER — बिना login के
+#   VISIT COUNTER
 # ══════════════════════════════════════════════
 visit_data = {
     "total_visits": 0,
@@ -40,13 +41,12 @@ visit_data = {
     "daily_counts": {},
     "first_visit": None,
     "last_visit": None,
-
-    "unique_chatbot_users": set(),   # ✔ comma added
+    "unique_chatbot_users": set(),
     "user_count": 0
 }
 
 REPORT_EMAIL       = "bishtsuraj0311@gmail.com"
-VISIT_REPORT_EVERY = 10      # हर 10 visits पर email
+VISIT_REPORT_EVERY = 10
 
 
 def send_visit_report():
@@ -59,7 +59,6 @@ def send_visit_report():
         print("[VisitCounter] SMTP credentials missing in .env")
         return
 
-    # ✅ body PEHLE define karo
     today = datetime.now().strftime("%Y-%m-%d")
     daily_table = "\n".join(
         f"  {d}: {c} visits"
@@ -98,7 +97,7 @@ Report Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     try:
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.ehlo()
-            server.starttls()   # ✅ Mailtrap ke liye zaruri
+            server.starttls()
             server.login(sender_email, sender_pass)
             server.sendmail(sender_email, REPORT_EMAIL, msg.as_string())
         print(f"[VisitCounter] ✅ Email sent to {REPORT_EMAIL}")
@@ -107,10 +106,9 @@ Report Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 
 def record_visit(ip: str):
-    now = datetime.now()
+    now   = datetime.now()
     today = now.strftime("%Y-%m-%d")
 
-    # normal stats
     visit_data["total_visits"] += 1
     visit_data["last_visit"] = now.strftime("%Y-%m-%d %H:%M:%S")
     visit_data["unique_ips"].add(ip)
@@ -119,31 +117,21 @@ def record_visit(ip: str):
     if visit_data["first_visit"] is None:
         visit_data["first_visit"] = visit_data["last_visit"]
 
-    # ⭐ UNIQUE USER LOGIC
     if ip not in visit_data["unique_chatbot_users"]:
         visit_data["unique_chatbot_users"].add(ip)
         visit_data["user_count"] += 1
-
         print(f"[User] New chatbot user: {ip}")
-
-        # ⭐ SEND EMAIL EVERY 2 USERS
-        if visit_data["user_count"] % 10== 0:
+        if visit_data["user_count"] % 10 == 0:
             send_visit_report()
 
 
-
-
-
 # ══════════════════════════════════════════════
-
-
-@app.on_event("startup")
-async def startup_event():
+#   STARTUP — FAISS loads in background thread
+#   so port opens immediately (fixes Render timeout)
+# ══════════════════════════════════════════════
+def load_faiss_background():
     global vectorstore
-    # Run heavy loading in background thread so port opens immediately
-    import threading
-    def load_faiss():
-        global vectorstore
+    try:
         print("Loading FAISS index in background...")
         embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2",
@@ -155,14 +143,21 @@ async def startup_event():
             index_path, embeddings,
             allow_dangerous_deserialization=True
         )
-        print("Diksha is ready!")
-    
-    thread = threading.Thread(target=load_faiss)
-    thread.daemon = True
+        print("✅ Diksha is ready!")
+    except Exception as e:
+        print(f"❌ FAISS load error: {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    thread = threading.Thread(target=load_faiss_background, daemon=True)
     thread.start()
-    print("Server started! FAISS loading in background...")
+    print("🚀 Server started! FAISS loading in background...")
 
 
+# ══════════════════════════════════════════════
+#   MODELS
+# ══════════════════════════════════════════════
 class TTSRequest(BaseModel):
     text: str
     lang: str = "en"
@@ -184,49 +179,55 @@ class HistoryResponse(BaseModel):
     messages:   List[dict]
 
 
+# ══════════════════════════════════════════════
+#   ROUTES
+# ══════════════════════════════════════════════
+@app.get("/")
+def home():
+    return {"chatbot": "Diksha", "status": "running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "faiss_loaded": vectorstore is not None}
+
 @app.post("/tts")
 async def tts_endpoint(request: TTSRequest):
     audio = await run_in_threadpool(generate_voice, request.text, request.lang)
     return {"audio_base64": audio}
 
-@app.get("/")
-def home():
-    return {"chatbot": "Diksha", "status": "running"}
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, req: Request):
+
+    # ✅ FIX: extract question from request object
+    question = request.question.strip()
+
+    # Return friendly message while FAISS is still loading
     if vectorstore is None:
         return ChatResponse(
             answer="Diksha is starting up, please wait 30 seconds and try again!",
             language="en",
             session_id=request.session_id or str(uuid.uuid4())
         )
-    
-    # ✅ BEST PRACTICE IP EXTRACTION
+
+    # IP extraction
     forwarded = req.headers.get("x-forwarded-for")
-    if forwarded:
-        ip = forwarded.split(",")[0].strip()
-    else:
-        ip = req.client.host
+    ip = forwarded.split(",")[0].strip() if forwarded else req.client.host
 
     record_visit(ip)
     visit_data["chatbot_usage"] += 1
 
-    # Language
+    # Language detection
     if request.language and request.language in ['en', 'hi', 'ga', 'ku']:
         lang = request.language
     else:
-        lang = detect_language(question)
+        lang = detect_language(question)   # ✅ FIX: was using undefined 'question'
 
     session_id = request.session_id or str(uuid.uuid4())
     if session_id not in chat_sessions:
         chat_sessions[session_id] = []
 
-    # History
+    # Build history
     history_text = ""
     if chat_sessions[session_id]:
         history_text = "Previous conversation:\n"
@@ -262,25 +263,24 @@ def get_sessions():
         "session_ids":    list(chat_sessions.keys()),
     }
 
-# ✅ Live stats देखो browser में
 @app.get("/admin/visits")
 def get_visit_stats():
     return {
-        "total_visits": visit_data["total_visits"],
-        "chatbot_usage": visit_data["chatbot_usage"],  # 👈 ADD THIS
+        "total_visits":         visit_data["total_visits"],
+        "chatbot_usage":        visit_data["chatbot_usage"],
         "unique_chatbot_users": len(visit_data["unique_chatbot_users"]),
-        "unique_visitors": len(visit_data["unique_ips"]),
-        "daily_counts": visit_data["daily_counts"],
-        "first_visit": visit_data["first_visit"],
-        "last_visit": visit_data["last_visit"],
+        "unique_visitors":      len(visit_data["unique_ips"]),
+        "daily_counts":         visit_data["daily_counts"],
+        "first_visit":          visit_data["first_visit"],
+        "last_visit":           visit_data["last_visit"],
+        "faiss_loaded":         vectorstore is not None,
     }
 
-# ✅ अभी manually email भेजो
 @app.get("/admin/send-report")
 def send_report_now():
     send_visit_report()
     return {
-        "status": "✅ Report sent",
-        "to": REPORT_EMAIL,
+        "status":       "✅ Report sent",
+        "to":           REPORT_EMAIL,
         "unique_users": len(visit_data["unique_ips"])
     }
