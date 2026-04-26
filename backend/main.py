@@ -12,9 +12,9 @@ from typing import List, Optional
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
-from backend.language_detector import detect_language
-from backend.kb_query import get_answer
-from backend.voice import generate_voice
+from language_detector import detect_language
+from kb_query import get_answer
+from voice import generate_voice
 
 load_dotenv()
 
