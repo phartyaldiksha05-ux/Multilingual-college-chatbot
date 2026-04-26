@@ -1,0 +1,38 @@
+[
+  {
+    "question": "List all HODs of GBPIET departments",
+    "answer": "GBPIET Heads of Departments: 1. Applied Sciences: Dr. B. S. Tewari, 2. Biotechnology: Dr. Arun Bhatt, 3. Civil Engineering: Dr. B. S. Khati, 4. CSE: Dr. Bhumika Gupta, 5. CSA/MCA: Prof. Priti Dimri, 6. Electrical Engineering: Prof. Sanjay Gairola, 7. ECE: Dr. Mahesh Kr. Agarwal, 8. Mechanical Engineering: Prof. K. K. S. Mer. More: https://gbpiet.ac.in/administration/heads-of-departments/"
+  },
+  {
+    "question": "Who is the HOD of Applied Sciences at GBPIET?",
+    "answer": "HOD of Applied Sciences and Humanities at GBPIET is Dr. B. S. Tewari. Teaches foundation subjects: Mathematics, Physics, Chemistry, English."
+  },
+  {
+    "question": "Who is the HOD of Biotechnology department?",
+    "answer": "HOD of Biotechnology at GBPIET is Dr. Arun Bhatt (Associate Professor). Research areas: Genetics, Molecular Breeding, Plant Biotechnology, Genomics. Department: https://gbpiet.ac.in/departments/biotechnology/"
+  },
+  {
+    "question": "Who is the HOD of Civil Engineering?",
+    "answer": "HOD of Civil Engineering at GBPIET is Dr. B. S. Khati. Research areas: Structural Engineering, Geotechnology, Infrastructure. Department: https://gbpiet.ac.in/departments/civil-engineering/"
+  },
+  {
+    "question": "Who is the HOD of CSA or MCA department?",
+    "answer": "HOD of Computer Science and Applications (CSA/MCA) at GBPIET is Prof. Priti Dimri. She heads the MCA program. Department: https://gbpiet.ac.in/departments/computer-science-and-applications/"
+  },
+  {
+    "question": "Who is the HOD of CSE department?",
+    "answer": "HOD of Computer Science and Engineering (CSE) at GBPIET is Dr. Bhumika Gupta. Research: Machine Learning, AI, Data Mining, Network Security. Department: https://gbpiet.ac.in/departments/computer-science-engineering/"
+  },
+  {
+    "question": "Who is the HOD of Electrical Engineering?",
+    "answer": "HOD of Electrical Engineering at GBPIET is Prof. Sanjay Gairola. Research: Power Systems, Control Systems, Renewable Energy. Department: https://gbpiet.ac.in/departments/electrical-engineering/"
+  },
+  {
+    "question": "Who is the HOD of ECE department?",
+    "answer": "HOD of Electronics and Communication Engineering (ECE) at GBPIET is Dr. Mahesh Kr. Agarwal. Research: VLSI Design, Signal Processing, Embedded Systems. Department: https://gbpiet.ac.in/departments/electronics-and-communication-engineering/"
+  },
+  {
+    "question": "Who is the HOD of Mechanical Engineering?",
+    "answer": "HOD of Mechanical Engineering at GBPIET is Prof. K. K. S. Mer. Research: CAD/CAM, Thermal Engineering, Production Engineering. Department: https://gbpiet.ac.in/departments/mechanical-engineering/"
+  }
+]

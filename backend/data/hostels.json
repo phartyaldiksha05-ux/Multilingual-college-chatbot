@@ -1,0 +1,122 @@
+{
+  "hostel_info": {
+    "description": "GBPIET hostels are well equipped with proper sanitary, electrical and clean drinking water facilities, along with internet facility. Each hostel has a common hall with HD LCD television, newspaper facility, and a spacious mess where hygienic vegetarian and nutritious food is served. Hostels have round the clock security.",
+    "fee_payment": "https://onlinesbi.sbi.bank.in/sbicollect/icollecthome.htm?corpID=908435",
+    "total_boys_capacity": 1200,
+    "total_girls_capacity": 405
+  },
+  "boys_hostels": [
+    {
+      "sno": 1,
+      "name": "Neelkanth Hostel",
+      "capacity": 150,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Dr. Papendra Kumar", "contact": "9412152558" },
+        { "name": "Dr. Joginder Kumar", "contact": "9719971661" }
+      ]
+    },
+    {
+      "sno": 2,
+      "name": "Kedar ABC Hostel",
+      "capacity": 150,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Dr. Ajit Negi",        "contact": "8755651018" },
+        { "name": "Dr. S. Chandravanshi", "contact": "9827063045" }
+      ]
+    },
+    {
+      "sno": 3,
+      "name": "Kailash Hostel",
+      "capacity": 150,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Mr. Surjeet Patel", "contact": "9169581187" },
+        { "name": "Mr. Neem Sagar",    "contact": "9520477755" }
+      ]
+    },
+    {
+      "sno": 4,
+      "name": "Rudra Hostel",
+      "capacity": 180,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Mr. Bhanu Pratap", "contact": "9758582407" },
+        { "name": "Dr. Amit Kumar",   "contact": "8266936058" }
+      ]
+    },
+    {
+      "sno": 5,
+      "name": "Badri Hostel",
+      "capacity": 120,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Dr. Manoj Kumar",   "contact": "9897485705" },
+        { "name": "Dr. Sandeep Kumar", "contact": "7895622567" }
+      ]
+    },
+    {
+      "sno": 6,
+      "name": "Alaknanda Hostel",
+      "capacity": 50,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Dr. S. Ghansela",  "contact": "9634175347" },
+        { "name": "Mr. Ashwani Saini","contact": "9411104117" }
+      ]
+    },
+    {
+      "sno": 7,
+      "name": "Shivalik Hostel (Kedar D & E)",
+      "capacity": 200,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Dr. R. B. Yadav", "contact": "9457030308" },
+        { "name": "Dr. Ajay Kumar",  "contact": "7500015922" }
+      ]
+    },
+    {
+      "sno": 8,
+      "name": "Trishul Hostel",
+      "capacity": 200,
+      "type": "Boys",
+      "wardens": [
+        { "name": "Mr. Ramesh Kumar", "contact": "8755052723" },
+        { "name": "Mr. K. D. Narayan","contact": "6397806050" }
+      ]
+    }
+  ],
+  "girls_hostels": [
+    {
+      "sno": 1,
+      "name": "Raman Hostel",
+      "capacity": 200,
+      "type": "Girls",
+      "wardens": [
+        { "name": "Dr. Bhumika Gupta", "contact": "8126019360" },
+        { "name": "Mr. Hemant Kumar",  "contact": "9412160064" }
+      ]
+    },
+    {
+      "sno": 2,
+      "name": "Bhagirathi Hostel",
+      "capacity": 60,
+      "type": "Girls",
+      "wardens": [
+        { "name": "Mrs. M. Kathayat", "contact": "9520604672" },
+        { "name": "Dr. Garima Singh", "contact": "9455684360" }
+      ]
+    },
+    {
+      "sno": 3,
+      "name": "Viswerwarya Hostel",
+      "capacity": 145,
+      "type": "Girls",
+      "wardens": [
+        { "name": "Dr. Priti Dimri", "contact": "7895869194" },
+        { "name": "Mrs. Rajni",      "contact": "8126611758" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+.env
+venv/
+__pycache__/
+node_modules/
+faiss_index/
+*.pyc
+*.pyo
+.DS_Store# =========================
+# Backend (Python)
+# =========================
+venv/
+__pycache__/
+*.pyc
+
+# FAISS index (generated files)
+backend/faiss_index/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS files
+# =========================
+Thumbs.db
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+
+# =========================
+# Environment variables
+# =========================
+.env
