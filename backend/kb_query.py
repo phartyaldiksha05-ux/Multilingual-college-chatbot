@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 client       = Groq(api_key=os.getenv("GROQ_API_KEY"))
-_vs_cache    = None
+_vs_cache    = None   # ✅ Will be set by main.py to avoid double loading
 _qa_database = []
 
 # ══════════════════════════════════════════════════════════
@@ -38,21 +38,28 @@ def load_qa_database():
     print(f"[DB] Loaded {len(_qa_database)} QA pairs")
     return _qa_database
 
+
 def get_vectorstore():
     global _vs_cache
-    if _vs_cache is None:
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"},
-            encode_kwargs={"normalize_embeddings": True}  # must match main.py
-        )
-        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
-        _vs_cache  = FAISS.load_local(
-            index_path, embeddings,
-            allow_dangerous_deserialization=True
-        )
-        print("[DB] FAISS loaded")
+    # ✅ If already set by main.py, reuse it (saves ~400MB RAM)
+    if _vs_cache is not None:
+        return _vs_cache
+
+    # Fallback: load independently only if not set by main.py
+    print("[DB] Loading FAISS independently (fallback)...")
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True}
+    )
+    index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+    _vs_cache  = FAISS.load_local(
+        index_path, embeddings,
+        allow_dangerous_deserialization=True
+    )
+    print("[DB] FAISS loaded")
     return _vs_cache
+
 
 # ══════════════════════════════════════════════════════════
 # HINDI → ENGLISH MAP
@@ -90,6 +97,7 @@ def hi_to_en(text: str) -> str:
         t = t.replace(h, ' ' + e + ' ')
     return re.sub(r'\s+', ' ', t).strip()
 
+
 # ══════════════════════════════════════════════════════════
 # STEP 1 — EXACT MATCH
 # ══════════════════════════════════════════════════════════
@@ -100,6 +108,7 @@ def exact_match(question: str) -> str | None:
             print(f"[EXACT] {item['question'][:60]}")
             return item["answer"]
     return None
+
 
 # ══════════════════════════════════════════════════════════
 # STEP 2 — KEYWORD MATCH
@@ -115,7 +124,7 @@ STOP = {
 }
 
 def get_keywords(text: str) -> set:
-    words = set(re.findall(r'[\u0900-\u097F]+|[a-zA-Z0-9]+', text.lower()))
+    words      = set(re.findall(r'[\u0900-\u097F]+|[a-zA-Z0-9]+', text.lower()))
     translated = set(re.findall(r'[a-zA-Z0-9]+', hi_to_en(text)))
     return (words | translated) - STOP
 
@@ -139,6 +148,7 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
 
     return best_ans
 
+
 # ══════════════════════════════════════════════════════════
 # STEP 3 — SMART FAISS ROUTING
 # ══════════════════════════════════════════════════════════
@@ -146,7 +156,6 @@ def smart_query(question: str) -> str:
     q  = question.lower()
     qt = hi_to_en(q)
 
-    # ── ADMISSION — check course type first ──────────────
     if any(w in qt for w in ['admission', 'jee', 'gate', 'utuee', 'apply',
                                'eligibility', 'praves', 'daakhila']):
         if any(w in qt for w in ['btech', 'b tech', 'b.tech', 'undergraduate',
@@ -160,10 +169,8 @@ def smart_query(question: str) -> str:
         elif 'phd' in qt or 'doctorate' in qt:
             return "PhD Admission written exam interview GBPIET"
         else:
-            # General admission — default to B.Tech
             return "B.Tech Admission JEE Main UKTECH counselling GBPIET"
 
-    # ── FACULTY ───────────────────────────────────────────
     if any(w in qt for w in ['mca faculty', 'csa faculty', 'mca teacher']):
         return "CSA MCA Faculty Priti Dimri Ashish Negi Yashwant Deepak"
     if any(w in qt for w in ['cse faculty', 'cse teacher', 'cse professor']):
@@ -179,7 +186,6 @@ def smart_query(question: str) -> str:
     if any(w in qt for w in ['biotech faculty', 'biotechnology faculty']):
         return "Biotechnology Faculty Arun Bhatt Mamta Baunthiyal"
 
-    # ── HOSTEL ────────────────────────────────────────────
     if any(w in qt for w in ['first year hostel', '1st year hostel', 'fresher hostel']):
         return "First Year Hostel Trishul Kailash Boys Raman Viswerwarya Girls GBPIET"
     if any(w in qt for w in ['girls hostel', 'ladies hostel']):
@@ -189,7 +195,6 @@ def smart_query(question: str) -> str:
     if any(w in qt for w in ['hostel', 'warden', 'accommodation']):
         return "Hostel Warden Boys Girls GBPIET 11 hostels"
 
-    # ── HOD / ADMINISTRATION ──────────────────────────────
     if any(w in qt for w in ['hod', 'head department', 'head of department']):
         return "Head of Department HOD all departments GBPIET"
     if any(w in qt for w in ['director']):
@@ -201,7 +206,6 @@ def smart_query(question: str) -> str:
     if any(w in qt for w in ['registrar']):
         return "Registrar Office GBPIET Administration"
 
-    # ── FEES ─────────────────────────────────────────────
     if any(w in qt for w in ['fees', 'fee', 'tuition', 'payment', 'scholarship']):
         if 'btech' in qt or 'b.tech' in qt:
             return "B.Tech Fee Structure GBPIET per year payment"
@@ -213,32 +217,26 @@ def smart_query(question: str) -> str:
             return "Hostel Mess Fee GBPIET payment SBI Collect"
         return "Fee Structure GBPIET B.Tech MCA M.Tech hostel payment"
 
-    # ── PLACEMENT ─────────────────────────────────────────
     if any(w in qt for w in ['placement', 'package', 'lpa', 'recruiter', 'job', 'campus']):
         return "Placement Record GBPIET Amazon Microsoft 92 LPA package recruiters"
 
-    # ── COURSES ──────────────────────────────────────────
     if any(w in qt for w in ['courses', 'program', 'branch', 'offered', 'available']):
         return "Courses Programs GBPIET B.Tech MCA M.Tech PhD all departments"
 
-    # ── CONTACT ───────────────────────────────────────────
     if any(w in qt for w in ['contact', 'phone', 'email', 'address']):
         return "Contact GBPIET phone email address website"
 
-    # ── HOW TO REACH ──────────────────────────────────────
     if any(w in qt for w in ['reach', 'route', 'direction', 'distance', 'location']):
         return "How to reach GBPIET Haridwar Dehradun Rishikesh Kotdwar distance route"
 
-    # ── RESULT / EXAM ─────────────────────────────────────
     if any(w in qt for w in ['result', 'exam', 'semester', 'timetable', 'calendar']):
         return "Result Exam Semester GBPIET ERP portal"
 
-    # ── ANTI RAGGING ──────────────────────────────────────
     if any(w in qt for w in ['ragging', 'anti ragging', 'helpline']):
         return "Anti Ragging Helpline GBPIET zero tolerance"
 
-    # Return translated if Hindi, else original
     return qt if (qt != q and len(qt) > 3) else question
+
 
 def faiss_search(question: str) -> str | None:
     try:
@@ -252,6 +250,7 @@ def faiss_search(question: str) -> str | None:
     except Exception as e:
         print(f"FAISS error: {e}")
         return None
+
 
 # ══════════════════════════════════════════════════════════
 # GROQ LLM
@@ -275,7 +274,7 @@ Jawab (Hindi mein):"""
 
     elif lang == "ga":
         prompt = f"""Tum Diksha chho — GBPIET chatbot. Garhwali mein jawab do (Devanagari).
-Sirf context use karo. Nahi mila: " माफ करा, मीथे ये जानकारी नी मिली। क्या तुम कृपा करीक अपरी बात द्वीसर शब्दो मा बोल सकदा?"
+Sirf context use karo. Nahi mila: "माफ करा, मी तैं त्वे सवाल समझ नि ऐ।"
 {history}
 Context: {context}
 Sawaal: {question}
@@ -283,7 +282,7 @@ Jawab:"""
 
     elif lang == "ku":
         prompt = f"""Tum Diksha chhu — GBPIET chatbot. Kumauni mein jawab do (Devanagari).
-Sirf context use karo. Nahi mila: "माफ करौ, में यो जाणकारी नि पाइ सकूँ। क्या तुम आपणि बात और शब्दो में कह सकूँ?"
+Sirf context use karo. Nahi mila: "माफ करिया ! म्यर पास तस के जानकारी न्है़ंं!"
 {history}
 Context: {context}
 Sawaal: {question}
@@ -296,7 +295,7 @@ RULES:
 - Reply in English only
 - Be respectful — use proper titles (Prof., Dr.)
 - Use ONLY the context below
-- If answer is not in context: "“I'm sorry, I couldn't find that information. Could you please rephrase your query?"
+- If answer is not in context: "I'm sorry, I couldn't find that information. Could you please rephrase your query?"
 - Keep answer clear, accurate and helpful
 - Do NOT mix B.Tech info with MCA or M.Tech info
 
@@ -311,8 +310,8 @@ Answer:"""
         r = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate. Never mix B.Tech with MCA/M.Tech answers."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate."},
+                {"role": "user",   "content": prompt}
             ],
             max_tokens=350,
             temperature=0.3
@@ -320,7 +319,8 @@ Answer:"""
         return r.choices[0].message.content.strip()
     except Exception as e:
         print(f"Groq error: {e}")
-        return "I'm unable to process your request."
+        return "I'm unable to process your request right now. Please try again."
+
 
 # ══════════════════════════════════════════════════════════
 # MAIN — Hybrid Search (Exact → Keyword → FAISS+Groq)
@@ -335,7 +335,6 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         return ans
 
     # Step 2 — Keyword match
-    # Use lower threshold for short questions
     thresh = 2 if len(question.split()) <= 5 else 3
     ans    = keyword_match(question, thresh)
     if ans:
@@ -351,28 +350,9 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     # Fallback
     print("[RESULT] Fallback")
     fb = {
-        "hi": "माफ़ करें, मैं आपकी क्वेरी समझ नहीं पाई। ",
-        "ga": "माफ करा, मीथे ये जानकारी नी मिली। क्या तुम कृपा करीक अपरी बात द्वीसर शब्दो मा बोल सकदा?",
-        "ku": "माफ करौ, में यो जाणकारी नि पाइ सकूँ। क्या तुम आपणि बात और शब्दो में कह सकूँ?",
+        "hi": "माफ़ करें, मैं आपकी क्वेरी समझ नहीं पाई।",
+        "ga": "माफ करा, मी तैं त्वे सवाल समझ नि ऐ।",
+        "ku": "माफ करिया ! म्यर पास तस के जानकारी न्है़ंं!",
         "en": "I'm sorry, I'm unable to understand your query. I don't have that information."
     }
     return fb.get(lang, fb["en"])
-
-
-if __name__ == "__main__":
-    load_qa_database()
-    print("\nTESTING HYBRID SEARCH\n" + "="*50)
-    tests = [
-        ("admission process of btech",           "en"),
-        ("btech admission process",               "en"),
-        ("What is the admission process for MCA?","en"),
-        ("Who are the faculty of MCA department?","en"),
-        ("How many hostels are available?",       "en"),
-        ("What are the fees at GBPIET?",          "en"),
-        ("जीबीपीआईईटी तक कैसे पहुँचें?",        "hi"),
-        ("B.Tech mein admission kaise le?",       "hi"),
-    ]
-    for q, l in tests:
-        print(f"\nQ[{l}]: {q}")
-        print(f"A: {get_answer(q, l)[:200]}")
-        print("-"*50)
