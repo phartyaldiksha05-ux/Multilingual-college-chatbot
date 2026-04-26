@@ -140,20 +140,27 @@ def record_visit(ip: str):
 @app.on_event("startup")
 async def startup_event():
     global vectorstore
-    import asyncio
-    await asyncio.sleep(0)   # ← ADD THIS LINE - yields control so port opens first
-    print("Loading FAISS index...")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True}
-    )
-    index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
-    vectorstore = FAISS.load_local(
-        index_path, embeddings,
-        allow_dangerous_deserialization=True
-    )
-    print("Diksha is ready!")
+    # Run heavy loading in background thread so port opens immediately
+    import threading
+    def load_faiss():
+        global vectorstore
+        print("Loading FAISS index in background...")
+        embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True}
+        )
+        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+        vectorstore = FAISS.load_local(
+            index_path, embeddings,
+            allow_dangerous_deserialization=True
+        )
+        print("Diksha is ready!")
+    
+    thread = threading.Thread(target=load_faiss)
+    thread.daemon = True
+    thread.start()
+    print("Server started! FAISS loading in background...")
 
 
 class TTSRequest(BaseModel):
@@ -191,10 +198,14 @@ def health():
 
 
 @app.post("/chat", response_model=ChatResponse)
-
 async def chat(request: ChatRequest, req: Request):
-    question = request.question.strip()
-
+    if vectorstore is None:
+        return ChatResponse(
+            answer="Diksha is starting up, please wait 30 seconds and try again!",
+            language="en",
+            session_id=request.session_id or str(uuid.uuid4())
+        )
+    
     # ✅ BEST PRACTICE IP EXTRACTION
     forwarded = req.headers.get("x-forwarded-for")
     if forwarded:
