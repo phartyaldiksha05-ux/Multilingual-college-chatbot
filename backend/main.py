@@ -140,13 +140,15 @@ def record_visit(ip: str):
 @app.on_event("startup")
 async def startup_event():
     global vectorstore
+    import asyncio
+    await asyncio.sleep(0)   # ← ADD THIS LINE - yields control so port opens first
     print("Loading FAISS index...")
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True}
     )
-    index_path  = os.path.join(os.path.dirname(__file__), "faiss_index")
+    index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
     vectorstore = FAISS.load_local(
         index_path, embeddings,
         allow_dangerous_deserialization=True
