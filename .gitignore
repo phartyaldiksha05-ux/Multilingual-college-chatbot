@@ -1,18 +1,28 @@
+# =========================
+# Environment variables
+# =========================
 .env
-venv/
-__pycache__/
-node_modules/
-faiss_index/
-*.pyc
-*.pyo
-.DS_Store# =========================
+.env.*
+
+# =========================
 # Backend (Python)
 # =========================
 venv/
 __pycache__/
 *.pyc
+*.pyo
 
+# =========================
+# Node / Frontend
+# =========================
+node_modules/
+build/
+dist/
+
+# =========================
 # FAISS index (generated files)
+# =========================
+faiss_index/
 backend/faiss_index/
 
 # =========================
@@ -23,14 +33,10 @@ backend/faiss_index/
 # =========================
 # OS files
 # =========================
+.DS_Store
 Thumbs.db
 
 # =========================
 # VS Code
 # =========================
 .vscode/
-
-# =========================
-# Environment variables
-# =========================
-.env
