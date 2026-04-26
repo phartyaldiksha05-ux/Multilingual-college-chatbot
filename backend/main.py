@@ -173,9 +173,9 @@ class HistoryResponse(BaseModel):
 def home():
     return {"chatbot": "Diksha", "status": "running"}
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
-    return {"status": "ok", "faiss_loaded": vectorstore is not None}
+    return {"status": "ok"}
 
 @app.post("/tts")
 async def tts_endpoint(request: TTSRequest):
