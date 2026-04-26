@@ -1,0 +1,38 @@
+services:
+  # ─────────────────────────────────────────────
+  #  1. BACKEND — Python FastAPI Web Service
+  # ─────────────────────────────────────────────
+  - type: web
+    name: diksha-chatbot-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false          # You will enter this manually in Render dashboard
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        value: sandbox.smtp.mailtrap.io
+      - key: SMTP_PORT
+        value: "2525"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+
+  # ─────────────────────────────────────────────
+  #  2. FRONTEND — React Static Site
+  # ─────────────────────────────────────────────
+  - type: web
+    name: diksha-chatbot-frontend
+    runtime: static
+    rootDir: frontend/diksha-chat
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_API_URL
+        sync: false          # Enter your backend Render URL here after backend deploys
