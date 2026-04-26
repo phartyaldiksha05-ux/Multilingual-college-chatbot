@@ -28,7 +28,7 @@ app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://your-frontend.onrender.com"
+        "https://bisht.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
