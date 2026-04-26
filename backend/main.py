@@ -143,6 +143,9 @@ def load_faiss_background():
             index_path, embeddings,
             allow_dangerous_deserialization=True
         )
+        # ✅ Share with kb_query so it doesn't reload embeddings again
+        import kb_query
+        kb_query._vs_cache = vectorstore
         print("✅ Diksha is ready!")
     except Exception as e:
         print(f"❌ FAISS load error: {e}")
