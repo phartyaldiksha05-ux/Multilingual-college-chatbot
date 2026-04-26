@@ -27,12 +27,9 @@ app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-    "http://localhost:3000",
-    "https://your-frontend.vercel.app"
-], # Viva ke liye sab allow kar dein
+    allow_origins=["*"],  # allows all frontend origins
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # allows GET, POST, OPTIONS etc.
     allow_headers=["*"],
 )
 chat_sessions = {}
