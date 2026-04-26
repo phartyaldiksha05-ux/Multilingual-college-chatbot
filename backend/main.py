@@ -27,11 +27,11 @@ app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Viva ke liye sab allow kar dein
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 chat_sessions = {}
 vectorstore   = None
 
