@@ -465,7 +465,7 @@ function FeesDropdown({ lang }) {
 }
 // ══ MAIN APP ════════════════════════════════════════════
 export default function App() {
-  const [stage, setStage]             = useState('idle');
+  const [stage, setStage]             = useState('welcome');
   const [messages, setMessages]       = useState([]);
   const [input, setInput]             = useState('');
   const [loading, setLoading]         = useState(false);
