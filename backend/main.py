@@ -38,7 +38,9 @@ async def allow_iframe(request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://multilingual-college-chatbot.onrender.com"
+        "https://multilingual-college-chatbot.onrender.com",
+        "https://gbpiet.ac.in",
+        "https://www.gbpiet.ac.in",
     ],
     allow_credentials=True,
     allow_methods=["*"],
