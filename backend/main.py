@@ -25,22 +25,11 @@ if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 
-@app.middleware("http")
-async def allow_iframe(request, call_next):
-    response = await call_next(request)
-
-    # 🔥 IMPORTANT FIX
-    response.headers["X-Frame-Options"] = "ALLOWALL"
-    response.headers["Content-Security-Policy"] = "frame-ancestors *"
-
-    return response
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://multilingual-college-chatbot.onrender.com",
-        "https://gbpiet.ac.in",
-        "https://www.gbpiet.ac.in",
     ],
     allow_credentials=True,
     allow_methods=["*"],
