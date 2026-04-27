@@ -815,8 +815,8 @@ const handleAdmissionSelect = (query, label) => {
   return (
     <>
       {/* ══ 1. FLOATING FAB ══ */}
-      {stage !== 'chat' && window.self === window.top && (
-  <div className="floating-fab" onClick={() => setStage('welcome')}>
+      {stage !== 'chat' && (
+        <div className="floating-fab" onClick={() => setStage('welcome')}>
           <div className="fab-pulse-ring"/>
           <div className="fab-circle">
             <img
