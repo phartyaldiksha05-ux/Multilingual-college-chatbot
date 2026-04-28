@@ -173,9 +173,9 @@ function HostelDropdown({ lang }) {
   ];
 
   const girlsHostels = [
-    { name: 'Raman Hostel',       seats: 160, year: 'First Year' },
+    { name: 'Raman Hostel',       seats: 160, year: '' },
     { name: 'Bhagirathi Hostel',  seats: 112,  year: '' },
-    { name: 'Viswerwarya Hostel', seats: 144, year: '' },
+    { name: 'Viswerwarya Hostel', seats: 144, year: 'First Year' },
   ];
 
   const isHi = lang === 'hi';
