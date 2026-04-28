@@ -110,8 +110,9 @@ body {
     box-shadow: none !important;
 }
 .popup-box {
-  pointer-events: auto;
-  width: clamp(280px, 90vw, 360px); /* ← fluid width */
+    pointer-events: auto;
+    background: white;
+    border-radius: 18px;
 }
 .popup-header {
   background: #003580;
