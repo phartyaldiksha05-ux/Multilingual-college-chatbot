@@ -101,9 +101,13 @@ body {
 
 /* ══ POPUP ══ */
 .popup-overlay {
-  background: transparent !important;
-  backdrop-filter: none !important;
-  pointer-events: none;
+    position: fixed;
+    inset: 0;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    opacity: 1 !important;
+    pointer-events: none;
+    box-shadow: none !important;
 }
 .popup-box {
   pointer-events: auto;
