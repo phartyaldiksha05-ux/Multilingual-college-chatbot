@@ -220,10 +220,11 @@ async def chat(request: ChatRequest, req: Request):
         lang = detect_language(question)
 
     session_id = request.session_id or str(uuid.uuid4())
+
     if session_id not in chat_sessions:
         chat_sessions[session_id] = []
 
-   
+    # HISTORY BUILD
     history_text = ""
     if chat_sessions[session_id]:
         history_text = "Previous conversation:\n"
@@ -231,12 +232,16 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
-    # 1️⃣ FIRST: check fixed college data
-    answer = get_fixed_answer(question)
+    # 1. FAISS FIRST
+    answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
-    # 2️⃣ IF not found → AI + FAISS
+    # 2. fallback
     if not answer:
-        answer = await run_in_threadpool(get_answer, question, lang, history_text)
+        answer = get_fixed_answer(question)
+
+    # 3. final fallback
+    if not answer:
+        answer = "Sorry, I don't have enough information for this query."
 
     chat_sessions[session_id].append({
         "role": "user",
@@ -257,8 +262,6 @@ async def chat(request: ChatRequest, req: Request):
         language=lang,
         session_id=session_id
     )
-
-
 @app.get("/history/{session_id}", response_model=HistoryResponse)
 def get_history(session_id: str):
     return HistoryResponse(
