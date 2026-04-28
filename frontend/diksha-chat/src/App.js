@@ -1,4 +1,4 @@
-import avatarImg from './assets/Diksha.png';
+import avatarImg from './assets/avatar.png';
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
