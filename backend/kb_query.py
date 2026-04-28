@@ -5,17 +5,10 @@ import re
 from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_community.vectorstores import FAISS
 from groq import Groq
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# ══════════════════════════════════════════════════════════
-# CLIENTS
-# ══════════════════════════════════════════════════════════
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
+client       = Groq(api_key=os.getenv("GROQ_API_KEY"))
 _vs_cache    = None   # ✅ Will be set by main.py to avoid double loading
 _qa_database = []
 
@@ -252,11 +245,12 @@ def faiss_search(question: str) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# BUILD PROMPT (shared by both Gemini & Groq)
+# GROQ LLM
 # ══════════════════════════════════════════════════════════
-def build_prompt(question: str, context: str, lang: str, history: str = "") -> str:
+def llm_answer(question: str, context: str, lang: str, history: str = "") -> str:
+
     if lang == "hi":
-        return f"""Aap Diksha hain — GBPIET ke liye helpful AI chatbot.
+        prompt = f"""Aap Diksha hain — GBPIET ke liye helpful AI chatbot.
 STRICT RULES:
 - HAMESHA shuddh Hindi mein jawab dein
 - Professor/Doctor ke liye "hain" use karein (hai NAHI)
@@ -271,7 +265,7 @@ Sawaal: {question}
 Jawab (Hindi mein):"""
 
     elif lang == "ga":
-        return f"""Tum Diksha chho — GBPIET chatbot. Garhwali mein jawab do (Devanagari).
+        prompt = f"""Tum Diksha chho — GBPIET chatbot. Garhwali mein jawab do (Devanagari).
 Sirf context use karo. Nahi mila: "माफ करा, मी तैं त्वे सवाल समझ नि ऐ।"
 {history}
 Context: {context}
@@ -279,7 +273,7 @@ Sawaal: {question}
 Jawab:"""
 
     elif lang == "ku":
-        return f"""Tum Diksha chhu — GBPIET chatbot. Kumauni mein jawab do (Devanagari).
+        prompt = f"""Tum Diksha chhu — GBPIET chatbot. Kumauni mein jawab do (Devanagari).
 Sirf context use karo. Nahi mila: "माफ करिया ! म्यर पास तस के जानकारी न्है़ंं!"
 {history}
 Context: {context}
@@ -287,7 +281,7 @@ Sawaal: {question}
 Jawab:"""
 
     else:
-        return f"""You are Diksha — a helpful AI assistant for GBPIET (Govind Ballabh Pant Institute of Engineering and Technology), Pauri Garhwal, Uttarakhand.
+        prompt = f"""You are Diksha — a helpful AI assistant for GBPIET (Govind Ballabh Pant Institute of Engineering and Technology), Pauri Garhwal, Uttarakhand.
 
 RULES:
 - Reply in English only
@@ -304,29 +298,8 @@ Context:
 Question: {question}
 Answer:"""
 
-
-# ══════════════════════════════════════════════════════════
-# GEMINI LLM  (PRIMARY)
-# ══════════════════════════════════════════════════════════
-def gemini_answer(question: str, context: str, lang: str, history: str = "") -> str:
     try:
-        prompt = build_prompt(question, context, lang, history)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        resp   = model.generate_content(prompt)
-        print("[LLM] Gemini answered")
-        return resp.text.strip()
-    except Exception as e:
-        print(f"Gemini error: {e}")
-        return None   # signals caller to try Groq
-
-
-# ══════════════════════════════════════════════════════════
-# GROQ LLM  (FALLBACK)
-# ══════════════════════════════════════════════════════════
-def groq_answer(question: str, context: str, lang: str, history: str = "") -> str:
-    try:
-        prompt = build_prompt(question, context, lang, history)
-        r = groq_client.chat.completions.create(
+        r = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate."},
@@ -335,40 +308,14 @@ def groq_answer(question: str, context: str, lang: str, history: str = "") -> st
             max_tokens=350,
             temperature=0.3
         )
-        print("[LLM] Groq answered")
         return r.choices[0].message.content.strip()
     except Exception as e:
         print(f"Groq error: {e}")
-        return None
+        return "I'm unable to process your request right now. Please try again."
 
 
 # ══════════════════════════════════════════════════════════
-# UNIFIED LLM CALLER  Gemini → Groq → hard fallback
-# ══════════════════════════════════════════════════════════
-def llm_answer(question: str, context: str, lang: str, history: str = "") -> str:
-    # 1️⃣ Try Gemini first
-    ans = gemini_answer(question, context, lang, history)
-    if ans:
-        return ans
-
-    # 2️⃣ Groq fallback
-    ans = groq_answer(question, context, lang, history)
-    if ans:
-        return ans
-
-    # 3️⃣ Last resort — return raw context snippet
-    print("[LLM] Both failed — returning raw context")
-    fb = {
-        "hi": "माफ़ करें, अभी सेवा उपलब्ध नहीं है। कृपया बाद में पुनः प्रयास करें।",
-        "ga": "माफ करा, अभी सेवा उपलब्ध नि ऐ।",
-        "ku": "माफ करिया, अभी सेवा उपलब्ध न्है़ंं!",
-        "en": "I'm sorry, the service is temporarily unavailable. Please try again shortly."
-    }
-    return fb.get(lang, fb["en"])
-
-
-# ══════════════════════════════════════════════════════════
-# MAIN — Hybrid Search (Exact → Keyword → FAISS + LLM)
+# MAIN — Hybrid Search (Exact → Keyword → FAISS+Groq)
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
@@ -386,10 +333,10 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         print("[RESULT] Keyword match")
         return ans
 
-    # Step 3 — FAISS + LLM (Gemini → Groq)
+    # Step 3 — FAISS + Groq
     ctx = faiss_search(question)
     if ctx:
-        print("[RESULT] FAISS + LLM")
+        print("[RESULT] FAISS + Groq")
         return llm_answer(question, ctx, lang, history)
 
     # Fallback
