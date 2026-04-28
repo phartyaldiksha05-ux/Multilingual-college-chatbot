@@ -488,7 +488,15 @@ export default function App() {
     sessionId = crypto.randomUUID();
     localStorage.setItem("session_id", sessionId);
   }
-
+useEffect(() => {
+  const handleVisibility = () => {
+    if (document.hidden) {
+      stopSpeaking();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, []);
   console.log("Session ID:", sessionId);
   setSessionId(sessionId);   // 👈 IMPORTANT (send to backend chat)
 }, []);
@@ -930,7 +938,7 @@ const handleAdmissionSelect = (query, label) => {
               {isSpeaking && (
                 <button className="drawer-icon-btn" onClick={stopSpeaking}>🔇</button>
               )}
-             <button className="drawer-icon-btn" onClick={() => setStage('Welcome')}>✕</button>
+             <button className="drawer-icon-btn" onClick={() => { stopSpeaking(); setStage('Welcome'); }}>✕</button>
             </div>
           </div>
 
