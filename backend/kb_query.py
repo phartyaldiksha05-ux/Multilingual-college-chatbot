@@ -10,16 +10,38 @@ from dotenv import load_dotenv
 load_dotenv()
 client       = Groq(api_key=os.getenv("GROQ_API_KEY"))
 _vs_cache    = None   # ✅ Will be set by main.py to avoid double loading
-from collections import deque
-_qa_database = deque(maxlen=2000)
+_qa_database = []
 
 # ══════════════════════════════════════════════════════════
 # LOAD ALL QA INTO MEMORY
 # ══════════════════════════════════════════════════════════
 def load_qa_database():
     global _qa_database
-    if _qa_database:
+
+    # already loaded → return cache
+    if len(_qa_database) > 0:
         return _qa_database
+
+    data_folder = os.path.join(os.path.dirname(__file__), "data")
+
+    for filepath in sorted(glob.glob(os.path.join(data_folder, "*.json"))):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            for item in data:
+                if isinstance(item, dict) and "question" in item and "answer" in item:
+                    _qa_database.append({
+                        "question": item["question"].strip(),
+                        "answer": item["answer"].strip(),
+                        "source": os.path.basename(filepath)
+                    })
+
+        except Exception as e:
+            print(f"Error loading {filepath}: {e}")
+
+    print(f"[DB] Loaded {len(_qa_database)} QA pairs")
+    return _qa_database
 
     data_folder = os.path.join(os.path.dirname(__file__), "data")
     for filepath in sorted(glob.glob(os.path.join(data_folder, "*.json"))):
