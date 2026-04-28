@@ -493,6 +493,17 @@ export default function App() {
 }, []);
 
 useEffect(() => {
+  let sid = localStorage.getItem("session_id");
+
+  if (!sid) {
+    sid = crypto.randomUUID();
+    localStorage.setItem("session_id", sid);
+  }
+
+  setSessionId(sid);
+}, []);
+
+useEffect(() => {
   const handleVisibility = () => {
     if (document.hidden) {
       stopSpeaking();
@@ -500,13 +511,10 @@ useEffect(() => {
   };
 
   document.addEventListener('visibilitychange', handleVisibility);
-  return () => document.removeEventListener('visibilitychange', handleVisibility);
-}, []);
-  document.addEventListener('visibilitychange', handleVisibility);
-  return () => document.removeEventListener('visibilitychange', handleVisibility);
-}, []);
-  console.log("Session ID:", sessionId);
-  setSessionId(sessionId);   // 👈 IMPORTANT (send to backend chat)
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibility);
+  };
 }, []);
   // ── Edge TTS ─────────────────────────────────────────
   const playAudio = (base64Audio, onEnd) => {
