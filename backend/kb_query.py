@@ -2,7 +2,6 @@ import os
 import json
 import glob
 import re
-from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_community.vectorstores import FAISS
 from groq import Groq
 from dotenv import load_dotenv
@@ -42,8 +41,8 @@ def load_qa_database():
 def get_vectorstore():
     global _vs_cache
     if _vs_cache is None:
-        from langchain_community.embeddings import FastEmbedEmbeddings
-        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        from langchain_huggingface import HuggingFaceEmbeddings
+        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
         _vs_cache = FAISS.load_local(
             index_path, embeddings,
