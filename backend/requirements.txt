@@ -11,7 +11,7 @@ langchain-text-splitters
 
 fastembed
 faiss-cpu
-
+google-generativeai
 groq
 langdetect
 edge-tts
