@@ -930,7 +930,7 @@ const handleAdmissionSelect = (query, label) => {
               {isSpeaking && (
                 <button className="drawer-icon-btn" onClick={stopSpeaking}>🔇</button>
               )}
-              <button className="drawer-icon-btn" onClick={() => { stopSpeaking(); setStage('Welcome'); }}>✕</button>
+             <button className="drawer-icon-btn" onClick={() => setStage('Welcome')}>✕</button>
             </div>
           </div>
 
