@@ -253,7 +253,7 @@ body {
   width: 400px;
   max-width: 100vw;
   height: 92dvh;
-  max-height: 700px;
+  max-height: min(700px, 92dvh);
   background: white;
   border-radius: 16px 0 0 0;
   box-shadow: -6px 0 48px rgba(0,0,0,0.18);
