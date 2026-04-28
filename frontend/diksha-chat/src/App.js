@@ -868,7 +868,11 @@ const handleAdmissionSelect = (query, label) => {
                   Pauri Garhwal, Uttarakhand — An Autonomous Institute of Govt. of Uttarakhand
                 </div>
               </div>
-             <button className="popup-close-btn" onClick={() => { stopSpeaking(); setStage('idle'); }}>✕</button>
+             <button className="drawer-icon-btn" onClick={() => { 
+  stopSpeaking(); 
+  setStage('idle');
+  window.parent.postMessage('CLOSE_DIKSHA', '*');
+}}>✕</button>
             </div>
 
             <div className="popup-diksha-row">
