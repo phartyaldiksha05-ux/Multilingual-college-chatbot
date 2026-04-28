@@ -465,7 +465,7 @@ function FeesDropdown({ lang }) {
 }
 // ══ MAIN APP ════════════════════════════════════════════
 export default function App() {
-  const [stage, setStage]             = useState('idle');
+  const [stage, setStage]             = useState('welcome');
   const [messages, setMessages]       = useState([]);
   const [input, setInput]             = useState('');
   const [loading, setLoading]         = useState(false);
@@ -815,7 +815,7 @@ const handleAdmissionSelect = (query, label) => {
   return (
     <>
       {/* ══ 1. FLOATING FAB ══ */}
-      {stage !== 'chat' && (
+      {stage !== 'chat' && window.self === window.top && (
         <div className="floating-fab" onClick={() => setStage('welcome')}>
           <div className="fab-pulse-ring"/>
           <div className="fab-circle">
@@ -840,7 +840,7 @@ const handleAdmissionSelect = (query, label) => {
       {/* ══ 2. LANGUAGE POPUP ══ */}
       {stage === 'welcome' && (
         <div className="popup-overlay"
-          onClick={e => { if (e.target.classList.contains('popup-overlay')) setStage('idle'); }}>
+          onClick={e => { if (e.target.classList.contains('popup-overlay')) setStage('Welcome'); }}>
           <div className="popup-box">
 
             <div className="popup-header">
@@ -860,7 +860,7 @@ const handleAdmissionSelect = (query, label) => {
                   Pauri Garhwal, Uttarakhand — An Autonomous Institute of Govt. of Uttarakhand
                 </div>
               </div>
-              <button className="popup-close-btn" onClick={() => setStage('idle')}>✕</button>
+              <button className="popup-close-btn" onClick={() => setStage('welcome')}>✕</button>
             </div>
 
             <div className="popup-diksha-row">
@@ -930,7 +930,7 @@ const handleAdmissionSelect = (query, label) => {
               {isSpeaking && (
                 <button className="drawer-icon-btn" onClick={stopSpeaking}>🔇</button>
               )}
-              <button className="drawer-icon-btn" onClick={() => setStage('idle')}>✕</button>
+              <button className="drawer-icon-btn" onClick={() => setStage('welcome')}>✕</button>
             </div>
           </div>
 
