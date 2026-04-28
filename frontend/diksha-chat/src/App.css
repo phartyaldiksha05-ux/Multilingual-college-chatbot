@@ -101,16 +101,14 @@ body {
 
 /* ══ POPUP OVERLAY ══ */
 
+.popup-overlay {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  pointer-events: none;   /* 👈 IMPORTANT */
+}
 
 .popup-box {
-  background: white;
-  border-radius: 16px;
-  width: 520px;
-  max-width: 95vw;
-  box-shadow: none; 
-  overflow: hidden;
-  animation: popIn 0.32s cubic-bezier(.4,0,.2,1);
-  position: relative;
+  pointer-events: auto;   /* allow clicks only on popup */
 }
 
 .popup-header {
