@@ -58,8 +58,8 @@ body {
 }
 
 .fab-circle {
-  width: 68px;
-  height: 68px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   border: 3px solid #C8A951;
   overflow: hidden;
@@ -545,8 +545,8 @@ body {
 
 /* Popup avatar */
 .popup-avatar {
-  width: 72px;
-  height: 72px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   border: 3px solid #C8A951;
   overflow: hidden;
