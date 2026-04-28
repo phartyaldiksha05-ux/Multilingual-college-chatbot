@@ -236,21 +236,7 @@ body {
 
 /* ══ CHAT DRAWER ══ */
 .chat-drawer {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 400px;
-  max-width: 100vw;
-  height: 92dvh;
-  max-height: min(700px, 92dvh);
-  background: white;
-  border-radius: 16px 0 0 0;
-  box-shadow: -6px 0 48px rgba(0,0,0,0.18);
-  display: flex;
-  flex-direction: column;
-  z-index: 9998;
-  overflow: hidden;
-  animation: drawerSlideIn 0.3s cubic-bezier(.4,0,.2,1);
+  box-shadow: none !important;
 }
 
 /* Drawer header */
