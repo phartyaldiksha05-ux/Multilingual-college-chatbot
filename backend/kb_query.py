@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()
 client       = Groq(api_key=os.getenv("GROQ_API_KEY"))
 _vs_cache    = None   # ✅ Will be set by main.py to avoid double loading
-_qa_database = []
+from collections import deque
+_qa_database = deque(maxlen=2000)
 
 # ══════════════════════════════════════════════════════════
 # LOAD ALL QA INTO MEMORY
