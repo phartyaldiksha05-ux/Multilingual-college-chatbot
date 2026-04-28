@@ -120,6 +120,14 @@
     "answer": "The Deputy Dean (Research and Development) at GBPIET is Dr. Sunil Chamoli."
   },
   {
+    "question": "Who is the Registrar ?",
+    "answer": "The Registrar at GBPIET is Mr. Sandeep Kumar."
+  },
+  {
+    "question": "Who is the Registrar at GBPIET?",
+    "answer": "The Registrar at GBPIET is Mr. Sandeep Kumar."
+  },
+  {
     "question": "Who are the Deputy Deans of PG at GBPIET?",
     "answer": "The Deputy Deans (PG) at GBPIET are Mr. Ramesh Kumar and Mr. Satyaveer Singh Rawat."
   },
