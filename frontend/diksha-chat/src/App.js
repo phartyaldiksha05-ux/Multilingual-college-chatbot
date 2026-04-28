@@ -481,19 +481,27 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
+ useEffect(() => {
   let sessionId = localStorage.getItem("session_id");
 
   if (!sessionId) {
     sessionId = crypto.randomUUID();
     localStorage.setItem("session_id", sessionId);
   }
+
+  setSessionId(sessionId);
+}, []);
+
 useEffect(() => {
   const handleVisibility = () => {
     if (document.hidden) {
       stopSpeaking();
     }
   };
+
+  document.addEventListener('visibilitychange', handleVisibility);
+  return () => document.removeEventListener('visibilitychange', handleVisibility);
+}, []);
   document.addEventListener('visibilitychange', handleVisibility);
   return () => document.removeEventListener('visibilitychange', handleVisibility);
 }, []);
