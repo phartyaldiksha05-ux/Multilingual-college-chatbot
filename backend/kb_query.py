@@ -323,7 +323,7 @@ Answer:"""
 
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate."},
                 {"role": "user",   "content": prompt}
@@ -334,8 +334,7 @@ Answer:"""
         return r.choices[0].message.content.strip()
     except Exception as e:
         print(f"Groq error: {e}")
-        return "I'm unable to process your request right now. Please try again."
-
+        return context[:500]  # ✅ fallback to FAISS result
 
 # ══════════════════════════════════════════════════════════
 # MAIN — Hybrid Search (Exact → Keyword → FAISS+Groq)
@@ -359,9 +358,15 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     # Step 3 — FAISS + Groq
     ctx = faiss_search(question)
     if ctx:
-        print("[RESULT] FAISS + Groq")
-        return llm_answer(question, ctx, lang, history)
+        print("[RESULT] FAISS")
 
+    # ✅ If context is already good, don't call Groq
+        if len(ctx) < 800:
+            return ctx
+
+    # Otherwise use Groq
+        return llm_answer(question, ctx, lang, history)
+    
     # Fallback
     print("[RESULT] Fallback")
     fb = {
