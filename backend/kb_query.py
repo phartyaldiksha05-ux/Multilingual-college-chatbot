@@ -311,7 +311,7 @@ Answer:"""
 def gemini_answer(question: str, context: str, lang: str, history: str = "") -> str:
     try:
         prompt = build_prompt(question, context, lang, history)
-        model = genai.GenerativeModel("gemini-1.5-pro-latest")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         resp   = model.generate_content(prompt)
         print("[LLM] Gemini answered")
         return resp.text.strip()
