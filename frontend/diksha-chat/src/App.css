@@ -115,6 +115,9 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 10000;
+  .popup-overlay::before,
+.popup-overlay::after{
+  display:none !important;
 }
 
 .popup-box {
