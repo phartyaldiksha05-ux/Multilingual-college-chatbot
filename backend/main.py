@@ -28,8 +28,8 @@ def get_fixed_answer(question: str):
     q = question.lower()
 
     fixed_data = {
-        "gbpiet registrar": "Dr. XYZ Sharma",
-        "gbpiet principal": "Dr. ABC Singh",
+        "gbpiet registrar": "Mr. Sandeep Kumar",
+        "gbpiet director": "Prof. (Dr.) V.K. Banga",
         "gbpiet location": "G. B. Pant Institute of Engineering & Technology, Pauri Garhwal"
     }
 
