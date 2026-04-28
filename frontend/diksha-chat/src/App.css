@@ -267,7 +267,6 @@ body {
 
   box-shadow: -6px 0 40px rgba(0,0,0,0.18);
 }
-}
 
 /* Drawer header */
 .drawer-header {
@@ -691,6 +690,8 @@ body {
 }
 /* ══ Avatar Container ══ */
 .diksha-avatar {
+  width: 48px;
+  height: 48px;
   position: relative;
   border-radius: 50%;
   overflow: hidden;
@@ -846,5 +847,16 @@ body {
     width: clamp(360px, 30vw, 420px);
     height: clamp(560px, 84vh, 760px);
     max-height: 760px;
+  }
+}
+@media (max-width: 500px) {
+  .diksha-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .fab-circle {
+    width: 70px;
+    height: 70px;
   }
 }
