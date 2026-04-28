@@ -42,8 +42,8 @@ def load_qa_database():
 def get_vectorstore():
     global _vs_cache
     if _vs_cache is None:
-        from langchain_community.embeddings import FasbedEmbeddings
-        embeddings = FasbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        from langchain_community.embeddings import FastEmbedEmbeddings
+        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
         _vs_cache = FAISS.load_local(
             index_path, embeddings,
@@ -136,7 +136,7 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
         if matches >= threshold and score > best_score:
             best_score = score
             best_ans   = i["answer"]
-            print(f"[KW] {score:.2f} m={matches}: {item['question'][:55]}")
+            print(f"[KW] {score:.2f} m={matches}: {i['question'][:55]}")
 
     return best_ans
 
