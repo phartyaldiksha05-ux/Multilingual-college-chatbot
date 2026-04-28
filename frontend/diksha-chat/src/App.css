@@ -100,17 +100,7 @@ body {
 }
 
 /* ══ POPUP OVERLAY ══ */
-.popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: transparent !important;
-  backdrop-filter: none !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  
-}
+
 
 .popup-box {
   background: white;
