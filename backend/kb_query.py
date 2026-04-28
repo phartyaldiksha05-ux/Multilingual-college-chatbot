@@ -17,31 +17,8 @@ _qa_database = []
 # ══════════════════════════════════════════════════════════
 def load_qa_database():
     global _qa_database
-
-    # already loaded → return cache
-    if len(_qa_database) > 0:
+    if _qa_database:
         return _qa_database
-
-    data_folder = os.path.join(os.path.dirname(__file__), "data")
-
-    for filepath in sorted(glob.glob(os.path.join(data_folder, "*.json"))):
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            for item in data:
-                if isinstance(item, dict) and "question" in item and "answer" in item:
-                    _qa_database.append({
-                        "question": item["question"].strip(),
-                        "answer": item["answer"].strip(),
-                        "source": os.path.basename(filepath)
-                    })
-
-        except Exception as e:
-            print(f"Error loading {filepath}: {e}")
-
-    print(f"[DB] Loaded {len(_qa_database)} QA pairs")
-    return _qa_database
 
     data_folder = os.path.join(os.path.dirname(__file__), "data")
     for filepath in sorted(glob.glob(os.path.join(data_folder, "*.json"))):
@@ -118,10 +95,10 @@ def hi_to_en(text: str) -> str:
 # ══════════════════════════════════════════════════════════
 def exact_match(question: str) -> str | None:
     q = question.strip().lower()
-    for i in load_qa_database():
-        if q == i["question"].lower():
-            print(f"[EXACT] {i['question'][:60]}")
-            return i["answer"]
+    for item in load_qa_database():
+        if q == item["question"].lower():
+            print(f"[EXACT] {item['question'][:60]}")
+            return item["answer"]
     return None
 
 
@@ -151,15 +128,15 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
     best_score = 0.0
     best_ans   = None
 
-    for i in load_qa_database():
-        s_kw    = get_keywords(i["question"])
+    for item in load_qa_database():
+        s_kw    = get_keywords(item["question"])
         matches = len(q_kw & s_kw)
         score   = matches / max(len(q_kw), len(s_kw), 1)
 
         if matches >= threshold and score > best_score:
             best_score = score
-            best_ans   = i["answer"]
-            print(f"[KW] {score:.2f} m={matches}: {i['question'][:55]}")
+            best_ans   = item["answer"]
+            print(f"[KW] {score:.2f} m={matches}: {item['question'][:55]}")
 
     return best_ans
 
@@ -323,18 +300,19 @@ Answer:"""
 
     try:
         r = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate."},
                 {"role": "user",   "content": prompt}
             ],
             max_tokens=350,
-            temperature=0
+            temperature=0.3
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
         print(f"Groq error: {e}")
-        return context[:500]  # ✅ fallback to FAISS result
+        return "I'm unable to process your request right now. Please try again."
+
 
 # ══════════════════════════════════════════════════════════
 # MAIN — Hybrid Search (Exact → Keyword → FAISS+Groq)
@@ -358,15 +336,9 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     # Step 3 — FAISS + Groq
     ctx = faiss_search(question)
     if ctx:
-        print("[RESULT] FAISS")
-
-    # ✅ If context is already good, don't call Groq
-        if len(ctx) < 800:
-            return ctx
-
-    # Otherwise use Groq
+        print("[RESULT] FAISS + Groq")
         return llm_answer(question, ctx, lang, history)
-    
+
     # Fallback
     print("[RESULT] Fallback")
     fb = {
