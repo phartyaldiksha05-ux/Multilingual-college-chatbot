@@ -223,6 +223,7 @@ async def chat(request: ChatRequest, req: Request):
     if session_id not in chat_sessions:
         chat_sessions[session_id] = []
 
+   
     history_text = ""
     if chat_sessions[session_id]:
         history_text = "Previous conversation:\n"
@@ -231,22 +232,31 @@ async def chat(request: ChatRequest, req: Request):
             history_text += f"{role}: {msg['message']}\n"
 
     # 1️⃣ FIRST: check fixed college data
-answer = get_fixed_answer(question)
+    answer = get_fixed_answer(question)
 
-# 2️⃣ IF not found → AI + FAISS
-if not answer:
-    answer = await run_in_threadpool(get_answer, question, lang, history_text)
+    # 2️⃣ IF not found → AI + FAISS
+    if not answer:
+        answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
     chat_sessions[session_id].append({
-        "role": "user", "message": question,
-        "language": lang, "timestamp": datetime.now().isoformat()
-    })
-    chat_sessions[session_id].append({
-        "role": "diksha", "message": answer,
-        "language": lang, "timestamp": datetime.now().isoformat()
+        "role": "user",
+        "message": question,
+        "language": lang,
+        "timestamp": datetime.now().isoformat()
     })
 
-    return ChatResponse(answer=answer, language=lang, session_id=session_id)
+    chat_sessions[session_id].append({
+        "role": "diksha",
+        "message": answer,
+        "language": lang,
+        "timestamp": datetime.now().isoformat()
+    })
+
+    return ChatResponse(
+        answer=answer,
+        language=lang,
+        session_id=session_id
+    )
 
 
 @app.get("/history/{session_id}", response_model=HistoryResponse)
