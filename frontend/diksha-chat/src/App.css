@@ -749,3 +749,11 @@ body {
   display: flex;
   align-items: center;
 }
+/* REMOVE ANY OVERLAY / BACKGROUND SHADOW */
+[class*="overlay"],
+[class*="backdrop"],
+[class*="modal"] {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
