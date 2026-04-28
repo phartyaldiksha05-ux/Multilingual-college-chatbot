@@ -922,7 +922,7 @@ const handleAdmissionSelect = (query, label) => {
                 <div className="drawer-status">
                   {isSpeaking   ? '🔊 Speaking...'
                   : isListening ? '🎤 Listening...'
-                  : '● GBPIET Collegemate'}
+                  : '● GBPIET Collegemate-your tour guide'}
                 </div>
               </div>
             </div>
