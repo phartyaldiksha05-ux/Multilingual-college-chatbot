@@ -24,6 +24,20 @@ if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
     build_knowledge_base()
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
+def get_fixed_answer(question: str):
+    q = question.lower()
+
+    fixed_data = {
+        "gbpiet registrar": "Dr. XYZ Sharma",
+        "gbpiet principal": "Dr. ABC Singh",
+        "gbpiet location": "G. B. Pant Institute of Engineering & Technology, Pauri Garhwal"
+    }
+
+    for key in fixed_data:
+        if key in q:
+            return fixed_data[key]
+
+    return None
 
 
 app.add_middleware(
@@ -216,6 +230,11 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
+    # 1️⃣ FIRST: check fixed college data
+answer = get_fixed_answer(question)
+
+# 2️⃣ IF not found → AI + FAISS
+if not answer:
     answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
     chat_sessions[session_id].append({
