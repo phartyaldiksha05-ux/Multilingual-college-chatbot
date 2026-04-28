@@ -1,7 +1,7 @@
 body
 {
-  background: transparent !important;
-  background-color: transparent !important;
+  background: none !important;
+  background-color: none !important;
 }
 {
   margin: 0;
