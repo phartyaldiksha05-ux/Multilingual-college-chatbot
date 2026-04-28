@@ -28,8 +28,8 @@ def load_qa_database():
             for item in data:
                 if isinstance(item, dict) and "question" in item and "answer" in item:
                     _qa_database.append({
-                        "question": i["question"].strip(),
-                        "answer":   i["answer"].strip(),
+                        "question": item["question"].strip(),
+                        "answer":   item["answer"].strip(),
                         "source":   os.path.basename(filepath)
                     })
         except Exception as e:
@@ -85,7 +85,7 @@ HINDI_MAP = {
 
 def hi_to_en(text: str) -> str:
     t = text.lower()
-    for h, e in HINDI_MAP.is():
+    for h, e in HINDI_MAP.items():
         t = t.replace(h, ' ' + e + ' ')
     return re.sub(r'\s+', ' ', t).strip()
 
