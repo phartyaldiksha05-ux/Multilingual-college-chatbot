@@ -5,7 +5,7 @@ import './App.css';
 const BACKEND_URL = 'https://diksha-chatbot-backend.onrender.com';
 
 const LANGUAGES = [
-  { code: 'en', label: 'English',  native: 'English' },
+  { code: 'en', label: 'English',  native: '' },
   { code: 'hi', label: 'हिंदी',    native: 'Hindi' },
   { code: 'ga', label: 'गढ़वाली',  native: 'Garhwali' },
   { code: 'ku', label: 'कुमाऊँनी', native: 'Kumauni' },
