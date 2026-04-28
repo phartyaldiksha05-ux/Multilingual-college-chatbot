@@ -28,8 +28,8 @@ def load_qa_database():
             for item in data:
                 if isinstance(item, dict) and "question" in item and "answer" in item:
                     _qa_database.append({
-                        "question": item["question"].strip(),
-                        "answer":   item["answer"].strip(),
+                        "question": i["question"].strip(),
+                        "answer":   i["answer"].strip(),
                         "source":   os.path.basename(filepath)
                     })
         except Exception as e:
@@ -42,8 +42,8 @@ def load_qa_database():
 def get_vectorstore():
     global _vs_cache
     if _vs_cache is None:
-        from langchain_community.embeddings import FastEmbedEmbeddings
-        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        from langchain_community.embeddings import FasbedEmbeddings
+        embeddings = FasbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
         _vs_cache = FAISS.load_local(
             index_path, embeddings,
@@ -85,7 +85,7 @@ HINDI_MAP = {
 
 def hi_to_en(text: str) -> str:
     t = text.lower()
-    for h, e in HINDI_MAP.items():
+    for h, e in HINDI_MAP.is():
         t = t.replace(h, ' ' + e + ' ')
     return re.sub(r'\s+', ' ', t).strip()
 
@@ -95,10 +95,10 @@ def hi_to_en(text: str) -> str:
 # ══════════════════════════════════════════════════════════
 def exact_match(question: str) -> str | None:
     q = question.strip().lower()
-    for item in load_qa_database():
-        if q == item["question"].lower():
-            print(f"[EXACT] {item['question'][:60]}")
-            return item["answer"]
+    for i in load_qa_database():
+        if q == i["question"].lower():
+            print(f"[EXACT] {i['question'][:60]}")
+            return i["answer"]
     return None
 
 
@@ -128,14 +128,14 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
     best_score = 0.0
     best_ans   = None
 
-    for item in load_qa_database():
-        s_kw    = get_keywords(item["question"])
+    for i in load_qa_database():
+        s_kw    = get_keywords(i["question"])
         matches = len(q_kw & s_kw)
         score   = matches / max(len(q_kw), len(s_kw), 1)
 
         if matches >= threshold and score > best_score:
             best_score = score
-            best_ans   = item["answer"]
+            best_ans   = i["answer"]
             print(f"[KW] {score:.2f} m={matches}: {item['question'][:55]}")
 
     return best_ans
@@ -306,7 +306,7 @@ Answer:"""
                 {"role": "user",   "content": prompt}
             ],
             max_tokens=350,
-            temperature=0.3
+            temperature=0
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
