@@ -107,10 +107,7 @@ body {
   pointer-events: none;   /* 👈 IMPORTANT */
 }
 
-.popup-box {
-  pointer-events: auto;   /* allow clicks only on popup */
-}
-
+.popup-box { box-shadow: none !important; }
 .popup-header {
   background: #003580;
   padding: 18px 20px;
