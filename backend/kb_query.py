@@ -41,8 +41,8 @@ def load_qa_database():
 def get_vectorstore():
     global _vs_cache
     if _vs_cache is None:
-        from langchain_huggingface import HuggingFaceEmbeddings
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        from langchain_community.embeddings import FastEmbedEmbeddings
+        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
         _vs_cache = FAISS.load_local(
             index_path, embeddings,
@@ -194,8 +194,7 @@ def smart_query(question: str) -> str:
         return "Dean Deputy Dean GBPIET Administration"
     if any(w in qt for w in ['governing council', 'board of governors']):
         return "Governing Council Board of Governors GBPIET"
-    if any(w in qt for w in ['registrar']):
-        return "The Registrar of GBPIET is Mr. Sandeep Kumar."    
+    
     if any(w in qt for w in ['registrar']):
         return "The Registrar of GBPIET is Mr. Sandeep Kumar."
 
@@ -234,16 +233,21 @@ def smart_query(question: str) -> str:
 def faiss_search(question: str) -> str | None:
     try:
         sq      = smart_query(question)
-        results = get_vectorstore().similarity_search(sq, k=3)
-        if results:
-            ctx = "\n\n".join([r.page_content for r in results])
-            print(f"[FAISS] '{sq[:50]}' → {len(results)} results")
-            return ctx
-        return None
+        results = get_vectorstore().similarity_search_with_score(sq, k=4)
+
+        # Filter irrelevant results
+        relevant = [(doc, score) for doc, score in results if score <= 2.5]
+
+        if not relevant:
+            print(f"[FAISS] No relevant results for '{sq[:50]}'")
+            return None
+
+        ctx = "\n\n".join([doc.page_content for doc, _ in relevant[:3]])
+        print(f"[FAISS] '{sq[:50]}' → {len(relevant)} results")
+        return ctx
     except Exception as e:
         print(f"FAISS error: {e}")
         return None
-
 
 # ══════════════════════════════════════════════════════════
 # GROQ LLM
@@ -307,7 +311,7 @@ Answer:"""
                 {"role": "user",   "content": prompt}
             ],
             max_tokens=350,
-            temperature=0.3
+            temperature=0.1
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
