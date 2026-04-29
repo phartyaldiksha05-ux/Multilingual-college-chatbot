@@ -5,6 +5,8 @@ from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
+# Yeh files FAISS me index NAHI hongi
+SKIP_FILES = ["keywords.json"]
 
 def detect_course_type(text: str):
     t = text.lower()
@@ -15,7 +17,6 @@ def detect_course_type(text: str):
     if any(k in t for k in ["mtech", "m.tech", "pg"]):
         return "mtech"
     return "general"
-
 
 def build_knowledge_base():
     print("=" * 50)
@@ -30,17 +31,26 @@ def build_knowledge_base():
     for filename in sorted(os.listdir(data_folder)):
         if not filename.endswith(".json"):
             continue
+
+        # ✅ keywords.json skip karo
+        if filename in SKIP_FILES:
+            print(f"  SKIPPED (keywords file): {filename}")
+            continue
+
         filepath = os.path.join(data_folder, filename)
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
             items = data if isinstance(data, list) else [data]
             count = 0
+
             for item in items:
                 if not isinstance(item, dict):
                     continue
                 if "question" not in item or "answer" not in item:
                     continue
+
                 q = item["question"].strip()
                 a = item["answer"].strip()
 
@@ -51,7 +61,6 @@ def build_knowledge_base():
                 cat         = filename.replace("faqs_", "").replace(".json", "")
                 course_type = detect_course_type(q + " " + a)
 
-                # FIX: Keep Q and A together so chunks don't split them apart
                 text = f"Category: {cat}\nCourse: {course_type}\nLanguage: {lang_tag}\nQuestion: {q}\nAnswer: {a}"
 
                 docs.append(Document(
@@ -81,7 +90,6 @@ def build_knowledge_base():
         print("ERROR: No data! Check backend/data/")
         return
 
-    # FIX: Larger chunks so Q+A pairs are never split mid-answer
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=600,
         chunk_overlap=80,
@@ -90,20 +98,19 @@ def build_knowledge_base():
     chunks = splitter.split_documents(docs)
     print(f"  Chunks: {len(chunks)}")
 
-    # FIX: Use BAAI/bge-small-en-v1.5 explicitly — same model used in kb_query.py and main.py
     print("\nCreating embeddings with BAAI/bge-small-en-v1.5...")
     embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
     print("Building FAISS index...")
     vectorstore = FAISS.from_documents(chunks, embeddings)
-    index_path  = os.path.join(os.path.dirname(__file__), "faiss_index")
+
+    index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
     vectorstore.save_local(index_path)
 
     print("\n" + "=" * 50)
     print("FAISS Index Built Successfully!")
     print(f"Saved at: {index_path}")
     print("=" * 50)
-
 
 if __name__ == "__main__":
     build_knowledge_base()
