@@ -1112,7 +1112,7 @@ const handleAdmissionSelect = (query, label) => {
           </div>
 
           <div className="drawer-disclaimer">
-            MCA Team Beta V26.1 &nbsp;|&nbsp; Release date 24/04/26
+            Beta V26.1 (24/04/26) &nbsp;|&nbsp; Team MCA Supervised - KDN
           </div>
         </div>
       )}
