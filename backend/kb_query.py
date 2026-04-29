@@ -194,6 +194,8 @@ def smart_query(question: str) -> str:
         return "Dean Deputy Dean GBPIET Administration"
     if any(w in qt for w in ['governing council', 'board of governors']):
         return "Governing Council Board of Governors GBPIET"
+     if any(w in qt for w in ['registrar']):
+        return "The Registrar of GBPIET is Mr. Sandeep Kumar."    
     if any(w in qt for w in ['registrar']):
         return "Registrar Office GBPIET Administration"
 
