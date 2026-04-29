@@ -18,26 +18,23 @@ from voice import generate_voice
 
 load_dotenv()
 
-if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
-    print("FAISS index not found, building...")
-    from kb_setup import build_knowledge_base
-    build_knowledge_base()
+
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 def get_fixed_answer(question: str):
-    q = question.lower()
+    q = question.lower().strip()
 
-    fixed_data = {
-        "gbpiet registrar": "Mr. Sandeep Kumar",
-        "gbpiet director": "Prof. (Dr.) V.K. Banga",
-        "gbpiet location": "G. B. Pant Institute of Engineering & Technology, Pauri Garhwal"
-    }
+    if "registrar" in q:
+        return "The Registrar of GBPIET is Mr. Sandeep Kumar."
 
-    for key in fixed_data:
-        if key in q:
-            return fixed_data[key]
+    if "director" in q:
+        return "The Director of GBPIET is Prof. (Dr.) V.K. Banga."
+
+    if any(w in q for w in ["location", "address", "where is"]):
+        return "GBPIET is located at G. B. Pant Institute of Engineering & Technology, Pauri Garhwal, Uttarakhand."
 
     return None
+    
 
 
 app.add_middleware(
@@ -140,19 +137,35 @@ def record_visit(ip: str):
 def load_faiss_background():
     global vectorstore
     try:
-        print("Loading FAISS index in background...")
+        import shutil
+
+        # Always delete old cached index so Render rebuilds fresh
+        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+        if os.path.exists(index_path):
+            shutil.rmtree(index_path)
+            print("[Startup] Deleted old FAISS index")
+
+        # Rebuild with correct model
+        print("[Startup] Rebuilding FAISS index...")
+        from kb_setup import build_knowledge_base
+        build_knowledge_base()
+
+        # Load freshly built index
+        print("[Startup] Loading FAISS index...")
         from langchain_community.embeddings import FastEmbedEmbeddings
         embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
-        index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
         vectorstore = FAISS.load_local(
             index_path, embeddings,
             allow_dangerous_deserialization=True
         )
+
+        # Share with kb_query
         import kb_query
         kb_query._vs_cache = vectorstore
-        print("Diksha is ready!")
+        print("[Startup] Diksha is ready!")
+
     except Exception as e:
-        print(f"FAISS load error: {e}")
+        print(f"[Startup] ERROR: {e}")
 
 
 @app.on_event("startup")
@@ -232,16 +245,16 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
-    # 1. FAISS FIRST
-    answer = await run_in_threadpool(get_answer, question, lang, history_text)
+    # 1. Fixed answers FIRST — instant, no FAISS needed
+    answer = get_fixed_answer(question)
 
-    # 2. fallback
+    # 2. FAISS + Groq if no fixed answer
     if not answer:
-        answer = get_fixed_answer(question)
+        answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
-    # 3. final fallback
+    # 3. Final fallback
     if not answer:
-        answer = "Sorry, I don't have enough information for this query."
+        answer = "Sorry, I don't have enough information for this query. Please try rephrasing."
 
     chat_sessions[session_id].append({
         "role": "user",
