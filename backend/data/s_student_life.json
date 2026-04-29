@@ -10,11 +10,7 @@
                  "number of students", "students in gbpiet"],
     "answer": "There are approximately 1700 students in GBPIET."
   },
-  {
-    "keywords": ["highest paid", "highest salary", "sabse zyada salary"],
-    "answer": "Out of Syllabus"
-  },
-  {
+ {
     "keywords": ["director", "निदेशक"],
     "answer": "The Director of GBPIET is Prof. (Dr.) V.K. Banga."
   },
