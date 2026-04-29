@@ -1,4 +1,4 @@
-from fastapi import FastAPI,Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -18,26 +18,12 @@ from voice import generate_voice
 
 load_dotenv()
 
-if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
-    print("FAISS index not found, building...")
-    from kb_setup import build_knowledge_base
-    build_knowledge_base()
+# ✅ Har baar server start ho → FAISS fresh rebuild ho
+print("Rebuilding FAISS index with latest data...")
+from kb_setup import build_knowledge_base
+build_knowledge_base()
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
-def get_fixed_answer(question: str):
-    q = question.lower().strip()
-
-    if "registrar" in q:
-        return "The Registrar of GBPIET is Mr. Sandeep Kumar."
-
-    if "director" in q:
-        return "The Director of GBPIET is Prof. (Dr.) V.K. Banga."
-
-    if any(w in q for w in ["location", "address", "where is"]):
-        return "GBPIET is located at G. B. Pant Institute of Engineering & Technology, Pauri Garhwal, Uttarakhand."
-
-    return None
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,6 +34,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 chat_sessions = {}
 vectorstore   = None
 
@@ -223,7 +210,6 @@ async def chat(request: ChatRequest, req: Request):
     if session_id not in chat_sessions:
         chat_sessions[session_id] = []
 
-    # HISTORY BUILD
     history_text = ""
     if chat_sessions[session_id]:
         history_text = "Previous conversation:\n"
@@ -231,14 +217,9 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
-    # 1. Fixed answers FIRST — instant, no FAISS needed
-    answer = get_fixed_answer(question)
+    # ✅ get_answer me ab keywords.json SABSE PEHLE check hoga
+    answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
-# 2. FAISS + Groq if no fixed answer
-    if not answer:
-        answer = await run_in_threadpool(get_answer, question, lang, history_text)
-
-    # 3. Final fallback
     if not answer:
         answer = "Sorry, I don't have enough information for this query. Please try rephrasing."
 
@@ -261,6 +242,8 @@ async def chat(request: ChatRequest, req: Request):
         language=lang,
         session_id=session_id
     )
+
+
 @app.get("/history/{session_id}", response_model=HistoryResponse)
 def get_history(session_id: str):
     return HistoryResponse(
