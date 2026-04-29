@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI,Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -18,11 +18,27 @@ from voice import generate_voice
 
 load_dotenv()
 
-# ── NO index build here at module level ──
-# Building happens inside startup_build_and_load() below
-# so it runs in a background thread and doesn't block server startup
+if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
+    print("FAISS index not found, building...")
+    from kb_setup import build_knowledge_base
+    build_knowledge_base()
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
+def get_fixed_answer(question: str):
+    q = question.lower()
+
+    fixed_data = {
+        "gbpiet registrar": "Mr. Sandeep Kumar",
+        "gbpiet director": "Prof. (Dr.) V.K. Banga",
+        "gbpiet location": "G. B. Pant Institute of Engineering & Technology, Pauri Garhwal"
+    }
+
+    for key in fixed_data:
+        if key in q:
+            return fixed_data[key]
+
+    return None
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,7 +49,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 chat_sessions = {}
 vectorstore   = None
 
@@ -51,25 +66,6 @@ visit_data = {
 REPORT_EMAIL = "bishtsuraj0311@gmail.com"
 
 
-# ══════════════════════════════════════════════════════════
-# FIXED ANSWERS (hardcoded facts that never change)
-# ══════════════════════════════════════════════════════════
-def get_fixed_answer(question: str):
-    q = question.lower()
-    fixed_data = {
-        "gbpiet registrar": "Mr. Sandeep Kumar",
-        "gbpiet director":  "Prof. (Dr.) V.K. Banga",
-        "gbpiet location":  "G. B. Pant Institute of Engineering & Technology, Pauri Garhwal"
-    }
-    for key in fixed_data:
-        if key in q:
-            return fixed_data[key]
-    return None
-
-
-# ══════════════════════════════════════════════════════════
-# VISIT TRACKING
-# ══════════════════════════════════════════════════════════
 def send_visit_report():
     sender_email = os.getenv("SMTP_EMAIL")
     sender_pass  = os.getenv("SMTP_PASSWORD")
@@ -85,6 +81,7 @@ def send_visit_report():
         f"  {d}: {c} visits"
         for d, c in sorted(visit_data["daily_counts"].items())[-7:]
     )
+
     body = f"""
 Diksha Chatbot Visit Report:
 
@@ -102,6 +99,7 @@ Last 7 days:
 Report Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 — Diksha Bot | GBPIET
 """
+
     msg = MIMEMultipart()
     msg["From"]    = sender_email
     msg["To"]      = REPORT_EMAIL
@@ -139,24 +137,10 @@ def record_visit(ip: str):
             send_visit_report()
 
 
-# ══════════════════════════════════════════════════════════
-# STARTUP — Build FAISS index then load it (background thread)
-# ══════════════════════════════════════════════════════════
-def startup_build_and_load():
-    """
-    Runs in a background thread on every deploy.
-    Always rebuilds the FAISS index so the embedding model
-    is guaranteed to match what kb_query.py uses.
-    """
+def load_faiss_background():
     global vectorstore
     try:
-        # Step 1: Always rebuild — this fixes the stale index on Render
-        print("[Startup] Rebuilding FAISS index with correct model...")
-        from kb_setup import build_knowledge_base
-        build_knowledge_base()
-
-        # Step 2: Load the freshly built index
-        print("[Startup] Loading FAISS index into memory...")
+        print("Loading FAISS index in background...")
         from langchain_community.embeddings import FastEmbedEmbeddings
         embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
@@ -164,28 +148,20 @@ def startup_build_and_load():
             index_path, embeddings,
             allow_dangerous_deserialization=True
         )
-
-        # Step 3: Share the loaded vectorstore with kb_query
-        # so both main.py and kb_query.py use the exact same object
         import kb_query
         kb_query._vs_cache = vectorstore
-
-        print("[Startup] Diksha is ready!")
-
+        print("Diksha is ready!")
     except Exception as e:
-        print(f"[Startup] ERROR: {e}")
+        print(f"FAISS load error: {e}")
 
 
 @app.on_event("startup")
 async def startup_event():
-    thread = threading.Thread(target=startup_build_and_load, daemon=True)
+    thread = threading.Thread(target=load_faiss_background, daemon=True)
     thread.start()
-    print("[Startup] Server started! FAISS building in background...")
+    print("Server started! FAISS loading in background...")
 
 
-# ══════════════════════════════════════════════════════════
-# MODELS
-# ══════════════════════════════════════════════════════════
 class TTSRequest(BaseModel):
     text: str
     lang: str = "en"
@@ -207,9 +183,6 @@ class HistoryResponse(BaseModel):
     messages:   List[dict]
 
 
-# ══════════════════════════════════════════════════════════
-# ROUTES
-# ══════════════════════════════════════════════════════════
 @app.get("/")
 def home():
     return {"chatbot": "Diksha", "status": "running"}
@@ -228,10 +201,9 @@ async def tts_endpoint(request: TTSRequest):
 async def chat(request: ChatRequest, req: Request):
     question = request.question.strip()
 
-    # Still loading — tell user to wait
     if vectorstore is None:
         return ChatResponse(
-            answer="Diksha is starting up, please wait 30–60 seconds and try again!",
+            answer="Diksha is starting up, please wait 30 seconds and try again!",
             language="en",
             session_id=request.session_id or str(uuid.uuid4())
         )
@@ -252,7 +224,7 @@ async def chat(request: ChatRequest, req: Request):
     if session_id not in chat_sessions:
         chat_sessions[session_id] = []
 
-    # Build conversation history for context
+    # HISTORY BUILD
     history_text = ""
     if chat_sessions[session_id]:
         history_text = "Previous conversation:\n"
@@ -260,28 +232,28 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
-    # 1. Try FAISS + Groq answer
+    # 1. FAISS FIRST
     answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
-    # 2. Try hardcoded fixed answers as fallback
+    # 2. fallback
     if not answer:
         answer = get_fixed_answer(question)
 
-    # 3. Final fallback message
+    # 3. final fallback
     if not answer:
-        answer = "Sorry, I don't have enough information for this query. Please try rephrasing."
+        answer = "Sorry, I don't have enough information for this query."
 
-    # Save to session history
     chat_sessions[session_id].append({
-        "role":      "user",
-        "message":   question,
-        "language":  lang,
+        "role": "user",
+        "message": question,
+        "language": lang,
         "timestamp": datetime.now().isoformat()
     })
+
     chat_sessions[session_id].append({
-        "role":      "diksha",
-        "message":   answer,
-        "language":  lang,
+        "role": "diksha",
+        "message": answer,
+        "language": lang,
         "timestamp": datetime.now().isoformat()
     })
 
@@ -290,8 +262,6 @@ async def chat(request: ChatRequest, req: Request):
         language=lang,
         session_id=session_id
     )
-
-
 @app.get("/history/{session_id}", response_model=HistoryResponse)
 def get_history(session_id: str):
     return HistoryResponse(
