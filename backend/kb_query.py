@@ -118,16 +118,23 @@ def hi_to_en(text: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 0 — KEYWORDS FILE MATCH
+# STEP 0 — KEYWORDS FILE MATCH (FIXED: Best match instead of first match)
 # ══════════════════════════════════════════════════════════
 def keywords_file_match(question: str) -> str | None:
     q = question.lower().strip()
+    best_score = 0
+    best_ans = None
+
     for item in load_keywords_database():
-        for kw in item["keywords"]:
-            if kw in q:
-                print(f"[KEYWORDS FILE] matched: '{kw}'")
-                return item["answer"]
-    return None
+        matched = [kw for kw in item["keywords"] if kw in q]
+        if matched:
+            score = len(matched)  # Jitne zyada keywords match, utna better
+            if score > best_score:
+                best_score = score
+                best_ans = item["answer"]
+                print(f"[KEYWORDS FILE] matched {matched} score={score}")
+
+    return best_ans
 
 
 # ══════════════════════════════════════════════════════════
@@ -143,7 +150,7 @@ def exact_match(question: str) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 2 — KEYWORD MATCH
+# STEP 2 — KEYWORD MATCH (FIXED: Added minimum score 0.3)
 # ══════════════════════════════════════════════════════════
 STOP = {
     'what','who','is','are','the','at','in','of','a','an','and','or',
@@ -173,7 +180,8 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
         matches = len(q_kw & s_kw)
         score   = matches / max(len(q_kw), len(s_kw), 1)
 
-        if matches >= threshold and score > best_score:
+        # FIX: Score bhi kam se kam 0.3 hona chahiye
+        if matches >= threshold and score > best_score and score >= 0.3:
             best_score = score
             best_ans   = item["answer"]
             print(f"[KW] {score:.2f} m={matches}: {item['question'][:55]}")
@@ -271,6 +279,9 @@ def smart_query(question: str) -> str:
     return qt if (qt != q and len(qt) > 3) else question
 
 
+# ══════════════════════════════════════════════════════════
+# FAISS SEARCH (FIXED: Sirf top 1 context use karo)
+# ══════════════════════════════════════════════════════════
 def faiss_search(question: str) -> str | None:
     try:
         sq      = smart_query(question)
@@ -281,8 +292,9 @@ def faiss_search(question: str) -> str | None:
             print(f"[FAISS] No relevant results for '{sq[:50]}'")
             return None
 
-        ctx = "\n\n".join([doc.page_content for doc, _ in relevant[:3]])
-        print(f"[FAISS] '{sq[:50]}' → {len(relevant)} results")
+        # FIX: Sirf best (top 1) match use karo — mix nahi hoga
+        ctx = relevant[0][0].page_content
+        print(f"[FAISS] '{sq[:50]}' → best score: {relevant[0][1]:.2f}")
         return ctx
     except Exception as e:
         print(f"FAISS error: {e}")
