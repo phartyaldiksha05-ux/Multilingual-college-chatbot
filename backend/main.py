@@ -232,16 +232,16 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
-    # 1. FAISS FIRST
-    answer = await run_in_threadpool(get_answer, question, lang, history_text)
+    # 1. Fixed answers FIRST — instant, no FAISS needed
+    answer = get_fixed_answer(question)
 
-    # 2. fallback
+# 2. FAISS + Groq if no fixed answer
     if not answer:
-        answer = get_fixed_answer(question)
+        answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
-    # 3. final fallback
+    # 3. Final fallback
     if not answer:
-        answer = "Sorry, I don't have enough information for this query."
+        answer = "Sorry, I don't have enough information for this query. Please try rephrasing."
 
     chat_sessions[session_id].append({
         "role": "user",
