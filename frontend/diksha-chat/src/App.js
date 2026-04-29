@@ -931,7 +931,7 @@ const handleAdmissionSelect = (query, label) => {
             </div>
 
             <p className="popup-footer">
-               &nbsp;•&nbsp; UGC Autonomous &nbsp;•&nbsp; AICTE UHV IKS
+               &nbsp;•&nbsp; UGC Autonomous &nbsp;•&nbsp; AICTE   UHV IKS
             </p>
           </div>
         </div>
