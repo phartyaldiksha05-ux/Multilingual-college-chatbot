@@ -25,17 +25,16 @@ if not os.path.exists(os.path.join(os.path.dirname(__file__), "faiss_index")):
 
 app = FastAPI(title="Diksha - GBPIET Chatbot", version="2.0.0")
 def get_fixed_answer(question: str):
-    q = question.lower()
+    q = question.lower().strip()
 
-    fixed_data = {
-        "gbpiet registrar": "Mr. Sandeep Kumar",
-        "gbpiet director": "Prof. (Dr.) V.K. Banga",
-        "gbpiet location": "G. B. Pant Institute of Engineering & Technology, Pauri Garhwal"
-    }
+    if "registrar" in q:
+        return "The Registrar of GBPIET is Mr. Sandeep Kumar."
 
-    for key in fixed_data:
-        if key in q:
-            return fixed_data[key]
+    if "director" in q:
+        return "The Director of GBPIET is Prof. (Dr.) V.K. Banga."
+
+    if any(w in q for w in ["location", "address", "where is"]):
+        return "GBPIET is located at G. B. Pant Institute of Engineering & Technology, Pauri Garhwal, Uttarakhand."
 
     return None
 
