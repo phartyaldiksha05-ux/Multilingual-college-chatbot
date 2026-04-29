@@ -197,7 +197,7 @@ def smart_query(question: str) -> str:
     if any(w in qt for w in ['registrar']):
         return "The Registrar of GBPIET is Mr. Sandeep Kumar."    
     if any(w in qt for w in ['registrar']):
-        return "Registrar Office GBPIET Administration"
+        return "The Registrar of GBPIET is Mr. Sandeep Kumar."
 
     if any(w in qt for w in ['fees', 'fee', 'tuition', 'payment', 'scholarship']):
         if 'btech' in qt or 'b.tech' in qt:
