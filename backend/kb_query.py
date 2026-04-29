@@ -7,9 +7,10 @@ from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
-client       = Groq(api_key=os.getenv("GROQ_API_KEY"))
-_vs_cache    = None   # ✅ Will be set by main.py to avoid double loading
-_qa_database = []
+client            = Groq(api_key=os.getenv("GROQ_API_KEY"))
+_vs_cache         = None
+_qa_database      = []
+_keywords_database = []
 
 # ══════════════════════════════════════════════════════════
 # LOAD ALL QA INTO MEMORY
@@ -21,6 +22,8 @@ def load_qa_database():
 
     data_folder = os.path.join(os.path.dirname(__file__), "data")
     for filepath in sorted(glob.glob(os.path.join(data_folder, "*.json"))):
+        if os.path.basename(filepath) == "keywords.json":
+            continue  # Skip keywords file
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -36,6 +39,31 @@ def load_qa_database():
 
     print(f"[DB] Loaded {len(_qa_database)} QA pairs")
     return _qa_database
+
+
+# ══════════════════════════════════════════════════════════
+# LOAD KEYWORDS DATABASE
+# ══════════════════════════════════════════════════════════
+def load_keywords_database():
+    global _keywords_database
+    if _keywords_database:
+        return _keywords_database
+
+    filepath = os.path.join(os.path.dirname(__file__), "data", "keywords.json")
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for item in data:
+            if isinstance(item, dict) and "keywords" in item and "answer" in item:
+                _keywords_database.append({
+                    "keywords": [k.lower().strip() for k in item["keywords"]],
+                    "answer":   item["answer"].strip()
+                })
+        print(f"[DB] Loaded {len(_keywords_database)} keyword rules")
+    except Exception as e:
+        print(f"Error loading keywords.json: {e}")
+
+    return _keywords_database
 
 
 def get_vectorstore():
@@ -87,6 +115,19 @@ def hi_to_en(text: str) -> str:
     for h, e in HINDI_MAP.items():
         t = t.replace(h, ' ' + e + ' ')
     return re.sub(r'\s+', ' ', t).strip()
+
+
+# ══════════════════════════════════════════════════════════
+# STEP 0 — KEYWORDS FILE MATCH
+# ══════════════════════════════════════════════════════════
+def keywords_file_match(question: str) -> str | None:
+    q = question.lower().strip()
+    for item in load_keywords_database():
+        for kw in item["keywords"]:
+            if kw in q:
+                print(f"[KEYWORDS FILE] matched: '{kw}'")
+                return item["answer"]
+    return None
 
 
 # ══════════════════════════════════════════════════════════
@@ -194,8 +235,8 @@ def smart_query(question: str) -> str:
         return "Dean Deputy Dean GBPIET Administration"
     if any(w in qt for w in ['governing council', 'board of governors']):
         return "Governing Council Board of Governors GBPIET"
-    
-    if any(w in qt for w in ['registrar','gbpiet registrar']):
+
+    if any(w in qt for w in ['registrar', 'gbpiet registrar']):
         return "The Registrar of GBPIET is Mr. Sandeep Kumar."
 
     if any(w in qt for w in ['fees', 'fee', 'tuition', 'payment', 'scholarship']):
@@ -234,8 +275,6 @@ def faiss_search(question: str) -> str | None:
     try:
         sq      = smart_query(question)
         results = get_vectorstore().similarity_search_with_score(sq, k=4)
-
-        # Filter irrelevant results
         relevant = [(doc, score) for doc, score in results if score <= 2.5]
 
         if not relevant:
@@ -248,6 +287,7 @@ def faiss_search(question: str) -> str | None:
     except Exception as e:
         print(f"FAISS error: {e}")
         return None
+
 
 # ══════════════════════════════════════════════════════════
 # GROQ LLM
@@ -320,10 +360,16 @@ Answer:"""
 
 
 # ══════════════════════════════════════════════════════════
-# MAIN — Hybrid Search (Exact → Keyword → FAISS+Groq)
+# MAIN — Hybrid Search (Keywords → Exact → Keyword → FAISS+Groq)
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
+
+    # Step 0 — Keywords file match (SABSE PEHLE)
+    ans = keywords_file_match(question)
+    if ans:
+        print("[RESULT] Keywords file match")
+        return ans
 
     # Step 1 — Exact match
     ans = exact_match(question)
