@@ -6,19 +6,14 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
 
-# ✅ Detect course type (VERY IMPORTANT)
 def detect_course_type(text: str):
     t = text.lower()
-
     if any(k in t for k in ["btech", "b.tech", "undergraduate", "ug", "12th"]):
         return "btech"
-
     if any(k in t for k in ["mca"]):
         return "mca"
-
     if any(k in t for k in ["mtech", "m.tech", "pg"]):
         return "mtech"
-
     return "general"
 
 
@@ -35,57 +30,40 @@ def build_knowledge_base():
     for filename in sorted(os.listdir(data_folder)):
         if not filename.endswith(".json"):
             continue
-
         filepath = os.path.join(data_folder, filename)
-
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
-
             items = data if isinstance(data, list) else [data]
             count = 0
-
             for item in items:
                 if not isinstance(item, dict):
                     continue
                 if "question" not in item or "answer" not in item:
                     continue
-
                 q = item["question"].strip()
                 a = item["answer"].strip()
 
-                # ✅ Language detection
                 hindi_chars = sum(1 for c in q if '\u0900' <= c <= '\u097F')
                 is_hindi    = hindi_chars > len(q) * 0.3
                 lang_tag    = "Hindi" if is_hindi else "English"
 
-                # ✅ Category
-                cat = filename.replace("faqs_", "").replace(".json", "")
-
-                # ✅ Course detection (NEW 🔥)
+                cat         = filename.replace("faqs_", "").replace(".json", "")
                 course_type = detect_course_type(q + " " + a)
 
-                # ✅ Better structured text (IMPORTANT)
-                text = f"""
-Language: {lang_tag}
-Course: {course_type}
-Category: {cat}
-
-Question: {q}
-Answer: {a}
-"""
+                # FIX: Keep Q and A together so chunks don't split them apart
+                text = f"Category: {cat}\nCourse: {course_type}\nLanguage: {lang_tag}\nQuestion: {q}\nAnswer: {a}"
 
                 docs.append(Document(
                     page_content=text,
                     metadata={
-                        "source": filename,
+                        "source":   filename,
                         "category": cat,
                         "language": lang_tag,
-                        "course": course_type,   # 🔥 NEW
+                        "course":   course_type,
                         "question": q
                     }
                 ))
-
                 count += 1
 
             if count > 0:
@@ -103,28 +81,27 @@ Answer: {a}
         print("ERROR: No data! Check backend/data/")
         return
 
-    # ✅ Chunking
+    # FIX: Larger chunks so Q+A pairs are never split mid-answer
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=350,
-        chunk_overlap=50,
+        chunk_size=600,
+        chunk_overlap=80,
         separators=["\n\n", "\n", ". ", " "]
     )
-
     chunks = splitter.split_documents(docs)
     print(f"  Chunks: {len(chunks)}")
 
-    # 🔥 MULTILINGUAL MODEL (VERY IMPORTANT FIX)
-    print("\nCreating embeddings... (first time may take time)")
-    embeddings = FastEmbedEmbeddings()
+    # FIX: Use BAAI/bge-small-en-v1.5 explicitly — same model used in kb_query.py and main.py
+    print("\nCreating embeddings with BAAI/bge-small-en-v1.5...")
+    embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+
     print("Building FAISS index...")
     vectorstore = FAISS.from_documents(chunks, embeddings)
-
-    index_path = os.path.join(os.path.dirname(__file__), "faiss_index")
+    index_path  = os.path.join(os.path.dirname(__file__), "faiss_index")
     vectorstore.save_local(index_path)
 
     print("\n" + "=" * 50)
-    print("✅ FAISS Index Built Successfully!")
-    print(f"📁 Saved at: {index_path}")
+    print("FAISS Index Built Successfully!")
+    print(f"Saved at: {index_path}")
     print("=" * 50)
 
 
