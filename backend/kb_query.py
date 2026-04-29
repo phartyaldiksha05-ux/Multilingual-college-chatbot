@@ -128,7 +128,7 @@ def keywords_file_match(question: str) -> str | None:
     for item in load_keywords_database():
         matched = [kw for kw in item["keywords"] if kw in q]
         if matched:
-            score = len(matched)  # Jitne zyada keywords match, utna better
+            score = len(matched)
             if score > best_score:
                 best_score = score
                 best_ans = item["answer"]
@@ -180,7 +180,6 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
         matches = len(q_kw & s_kw)
         score   = matches / max(len(q_kw), len(s_kw), 1)
 
-        # FIX: Score bhi kam se kam 0.3 hona chahiye
         if matches >= threshold and score > best_score and score >= 0.3:
             best_score = score
             best_ans   = item["answer"]
@@ -280,7 +279,7 @@ def smart_query(question: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════
-# FAISS SEARCH (FIXED: Sirf top 1 context use karo)
+# FAISS SEARCH (kept for future use)
 # ══════════════════════════════════════════════════════════
 def faiss_search(question: str) -> str | None:
     try:
@@ -292,7 +291,6 @@ def faiss_search(question: str) -> str | None:
             print(f"[FAISS] No relevant results for '{sq[:50]}'")
             return None
 
-        # FIX: Sirf best (top 1) match use karo — mix nahi hoga
         ctx = relevant[0][0].page_content
         print(f"[FAISS] '{sq[:50]}' → best score: {relevant[0][1]:.2f}")
         return ctx
@@ -372,7 +370,7 @@ Answer:"""
 
 
 # ══════════════════════════════════════════════════════════
-# MAIN — Hybrid Search (Keywords → Exact → Keyword → FAISS+Groq)
+# MAIN — Hybrid Search (Keywords → Exact → Keyword → Fallback)
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
@@ -396,18 +394,18 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         print("[RESULT] Keyword match")
         return ans
 
-    # Step 3 — FAISS + Groq
-    ctx = faiss_search(question)
-    if ctx:
-        print("[RESULT] FAISS + Groq")
-        return llm_answer(question, ctx, lang, history)
+    # Step 3 — FAISS + Groq (TEMPORARILY DISABLED — purana index galat answer deta tha)
+    # ctx = faiss_search(question)
+    # if ctx:
+    #     print("[RESULT] FAISS + Groq")
+    #     return llm_answer(question, ctx, lang, history)
 
     # Fallback
     print("[RESULT] Fallback")
     fb = {
-        "hi": "माफ़ करें, मैं आपकी क्वेरी समझ नहीं पाई।",
+        "hi": "माफ़ करें, मुझे यह जानकारी नहीं मिल पाई। कृपया अपना सवाल दूसरे शब्दों में पूछें।",
         "ga": "माफ करा, मी तैं त्वे सवाल समझ नि ऐ।",
         "ku": "माफ करिया ! म्यर पास तस के जानकारी न्है़ंं!",
-        "en": "I'm sorry, I'm unable to understand your query. I don't have that information."
+        "en": "I'm sorry, I couldn't find that information. Please try rephrasing your question."
     }
     return fb.get(lang, fb["en"])
