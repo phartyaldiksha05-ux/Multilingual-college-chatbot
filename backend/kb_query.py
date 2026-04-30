@@ -23,7 +23,7 @@ def load_qa_database():
     data_folder = os.path.join(os.path.dirname(__file__), "data")
     for filepath in sorted(glob.glob(os.path.join(data_folder, "*.json"))):
         if os.path.basename(filepath) == "keywords.json":
-            continue  # Skip keywords file
+            continue
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -118,7 +118,7 @@ def hi_to_en(text: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 0 — KEYWORDS FILE MATCH (FIXED: Best match instead of first match)
+# STEP 0 — KEYWORDS FILE MATCH
 # ══════════════════════════════════════════════════════════
 def keywords_file_match(question: str) -> str | None:
     q = question.lower().strip()
@@ -150,7 +150,7 @@ def exact_match(question: str) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 2 — KEYWORD MATCH (FIXED: Added minimum score 0.3)
+# STEP 2 — KEYWORD MATCH
 # ══════════════════════════════════════════════════════════
 STOP = {
     'what','who','is','are','the','at','in','of','a','an','and','or',
@@ -279,19 +279,22 @@ def smart_query(question: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════
-# FAISS SEARCH (kept for future use)
+# STEP 3 — FAISS SEARCH ✅ ENABLED
 # ══════════════════════════════════════════════════════════
 def faiss_search(question: str) -> str | None:
     try:
         sq      = smart_query(question)
         results = get_vectorstore().similarity_search_with_score(sq, k=4)
-        relevant = [(doc, score) for doc, score in results if score <= 2.5]
+
+        # ✅ Score threshold 2.5 → 1.5 kiya — zyada strict matching
+        relevant = [(doc, score) for doc, score in results if score <= 1.5]
 
         if not relevant:
-            print(f"[FAISS] No relevant results for '{sq[:50]}'")
+            print(f"[FAISS] No relevant results for '{sq[:50]}' (best score: {results[0][1]:.2f if results else 'N/A'})")
             return None
 
-        ctx = relevant[0][0].page_content
+        # ✅ Top 2 results ka context combine karo — better answer ke liye
+        ctx = "\n\n".join([doc.page_content for doc, _ in relevant[:2]])
         print(f"[FAISS] '{sq[:50]}' → best score: {relevant[0][1]:.2f}")
         return ctx
     except Exception as e:
@@ -300,7 +303,7 @@ def faiss_search(question: str) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# GROQ LLM
+# GROQ LLM ✅ ENABLED
 # ══════════════════════════════════════════════════════════
 def llm_answer(question: str, context: str, lang: str, history: str = "") -> str:
 
@@ -341,7 +344,7 @@ Jawab:"""
 RULES:
 - Reply in English only
 - Be respectful — use proper titles (Prof., Dr.)
-- Use ONLY the context below
+- Use ONLY the context below — do NOT use outside knowledge
 - If answer is not in context: "I'm sorry, I couldn't find that information. Could you please rephrase your query?"
 - Keep answer clear, accurate and helpful
 - Do NOT mix B.Tech info with MCA or M.Tech info
@@ -357,7 +360,7 @@ Answer:"""
         r = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate."},
+                {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate. Use ONLY the provided context."},
                 {"role": "user",   "content": prompt}
             ],
             max_tokens=350,
@@ -370,7 +373,8 @@ Answer:"""
 
 
 # ══════════════════════════════════════════════════════════
-# MAIN — Hybrid Search (Keywords → Exact → Keyword → Fallback)
+# MAIN — Hybrid Search
+# Flow: Keywords → Exact → Keyword → FAISS + Groq → Fallback
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
@@ -394,13 +398,13 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         print("[RESULT] Keyword match")
         return ans
 
-    Step 3 — FAISS + Groq (TEMPORARILY DISABLED — purana index galat answer deta tha)
-     ctx = faiss_search(question)
-     if ctx:
-         print("[RESULT] FAISS + Groq")
-         return llm_answer(question, ctx, lang, history)
+    # Step 3 — FAISS + Groq ✅ ENABLED
+    ctx = faiss_search(question)
+    if ctx:
+        print("[RESULT] FAISS + Groq")
+        return llm_answer(question, ctx, lang, history)
 
-     Fallback
+    # Fallback
     print("[RESULT] Fallback")
     fb = {
         "hi": "माफ़ करें, मुझे यह जानकारी नहीं मिल पाई। कृपया अपना सवाल दूसरे शब्दों में पूछें।",
