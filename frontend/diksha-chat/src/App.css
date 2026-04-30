@@ -710,7 +710,7 @@ body {
   border-radius: 50%;
   overflow: hidden;
   border: 2.5px solid #C8A951;
-  background: #003580;
+  background: transparent;
   flex-shrink: 0;
   box-shadow: 0 4px 18px rgba(0,53,128,0.35);
   transition: all 0.3s ease;
