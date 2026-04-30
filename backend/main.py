@@ -141,7 +141,7 @@ def load_faiss_background():
         print(f"FAISS load error: {e}")
 
 
-@app.on_event("startup")
+.on_event("startup")
 async def startup_event():
     thread = threading.Thread(target=load_faiss_background, daemon=True)
     thread.start()
@@ -169,11 +169,11 @@ class HistoryResponse(BaseModel):
     messages:   List[dict]
 
 
-@app.get("/")
+.get("/")
 def home():
     return {"chatbot": "Diksha", "status": "running"}
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
 
@@ -183,10 +183,14 @@ async def tts_endpoint(request: TTSRequest):
     return {"audio_base64": audio}
 
 
+# ONLY CHANGE THIS PART INSIDE /chat FUNCTION
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, req: Request):
-    # ✅ FIX: .lower() add kiya — ab "HELLO", "Hello", "hello" sab same kaam karenge
-    question = request.question.strip().lower()
+
+    # ✅ FIXED: lowercase hata diya
+    # Pehle .lower() tha, language detection bigaad sakta tha
+    question = request.question.strip()
 
     if vectorstore is None:
         return ChatResponse(
@@ -201,6 +205,7 @@ async def chat(request: ChatRequest, req: Request):
     record_visit(ip)
     visit_data["chatbot_usage"] += 1
 
+    # ✅ Same language reply system
     if request.language and request.language in ['en', 'hi', 'ga', 'ku']:
         lang = request.language
     else:
@@ -218,11 +223,16 @@ async def chat(request: ChatRequest, req: Request):
             role = "Student" if msg["role"] == "user" else "Diksha"
             history_text += f"{role}: {msg['message']}\n"
 
-    # ✅ get_answer me ab keywords.json SABSE PEHLE check hoga
     answer = await run_in_threadpool(get_answer, question, lang, history_text)
 
     if not answer:
-        answer = "Sorry, I don't have enough information for this query. Please try rephrasing."
+        fallback = {
+            "en": "Sorry, I don't have enough information for this query.",
+            "hi": "माफ़ कीजिए, मुझे इस सवाल की जानकारी नहीं मिली।",
+            "ga": "माफ करा, मी तैं जवाब नि दे पाऊँ।",
+            "ku": "माफ करिया, म्यर पास जवाब न्है।"
+        }
+        answer = fallback.get(lang, fallback["en"])
 
     chat_sessions[session_id].append({
         "role": "user",
@@ -243,7 +253,6 @@ async def chat(request: ChatRequest, req: Request):
         language=lang,
         session_id=session_id
     )
-
 
 @app.get("/history/{session_id}", response_model=HistoryResponse)
 def get_history(session_id: str):
