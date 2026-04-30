@@ -402,6 +402,16 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     if ans:
         print("[RESULT] Keywords file match")
         return ans
+     q = question.lower()
+
+    if "hod" in q or "head of department" in q:
+        ans = keywords_file_match(question)
+        if ans:
+            return ans
+        return "I'm sorry, I couldn't find verified information."
+
+    # Step 1 — Exact match
+    ans = exact_match(question)
 
     # Step 1 — Exact match
     ans = exact_match(question)
