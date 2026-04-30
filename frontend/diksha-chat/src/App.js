@@ -2,6 +2,34 @@ import avatarImg from './assets/logo.png';
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
+
+function renderTextWithLinks(text) {
+  if (!text) return text;
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) => {
+    if (part.match(/^https?:\/\//)) {
+      return (
+        
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: '#0a66c2',
+            fontWeight: 600,
+            textDecoration: 'underline',
+            wordBreak: 'break-all',
+            display: 'inline'
+          }}
+        >
+          🌐 {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 const BACKEND_URL = 'https://diksha-chatbot-backend.onrender.com';
 
 const LANGUAGES = [
@@ -1120,34 +1148,3 @@ const handleAdmissionSelect = (query, label) => {
   );
 }
 
-
-
-// URL ko clickable link mein convert karta hai
-function renderTextWithLinks(text) {
-  if (!text) return text;
-  
-  const parts = text.split(/(https?:\/\/[^\s]+)/g);
-  
-  return parts.map((part, i) => {
-    if (part.match(/^https?:\/\//)) {
-      return (
-        
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            color: '#0a66c2',
-            fontWeight: 600,
-            textDecoration: 'underline',
-            wordBreak: 'break-all',
-            display: 'inline'
-          }}
-        >
-          🌐 {part}
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
