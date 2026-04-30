@@ -53,7 +53,7 @@ function DikshaAvatar({ speaking, size = 'small' }) {
       overflow: 'hidden',
       flexShrink: 0,
       position: 'relative',
-      background: '#003580',
+      background: 'transparent',
       boxShadow: '0 2px 10px rgba(0,53,128,0.35)'
     }}>
       <img
