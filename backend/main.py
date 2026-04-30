@@ -185,7 +185,8 @@ async def tts_endpoint(request: TTSRequest):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, req: Request):
-    question = request.question.strip()
+    # ✅ FIX: .lower() add kiya — ab "HELLO", "Hello", "hello" sab same kaam karenge
+    question = request.question.strip().lower()
 
     if vectorstore is None:
         return ChatResponse(
