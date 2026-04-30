@@ -9,7 +9,7 @@ function renderTextWithLinks(text) {
   return parts.map((part, i) => {
     if (part.match(/^https?:\/\//)) {
       return (
-        
+          <a  
           key={i}
           href={part}
           target="_blank"
