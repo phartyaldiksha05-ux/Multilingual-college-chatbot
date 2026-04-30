@@ -998,7 +998,7 @@ const handleAdmissionSelect = (query, label) => {
   {msg.isLangSwitch && <span className="lang-switch-icon">🌐 </span>}
 
   {/* ✅ Show text ONLY once */}
-  <div>{msg.text}</div>
+  <div>{renderTextWithLinks(msg.text)}</div>
 
   {/* ✅ Placement link ONLY in Diksha reply */}
   {msg.role === 'diksha' && msg.text.toLowerCase().includes('placement') && (
