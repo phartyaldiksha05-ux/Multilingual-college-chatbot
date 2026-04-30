@@ -7,9 +7,9 @@ from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
-client            = Groq(api_key=os.getenv("GROQ_API_KEY"))
-_vs_cache         = None
-_qa_database      = []
+client             = Groq(api_key=os.getenv("GROQ_API_KEY"))
+_vs_cache          = None
+_qa_database       = []
 _keywords_database = []
 
 # ══════════════════════════════════════════════════════════
@@ -151,6 +151,7 @@ def exact_match(question: str) -> str | None:
 
 # ══════════════════════════════════════════════════════════
 # STEP 2 — KEYWORD MATCH
+# FIX: threshold aur scoring improve kiya
 # ══════════════════════════════════════════════════════════
 STOP = {
     'what','who','is','are','the','at','in','of','a','an','and','or',
@@ -167,7 +168,8 @@ def get_keywords(text: str) -> set:
     translated = set(re.findall(r'[a-zA-Z0-9]+', hi_to_en(text)))
     return (words | translated) - STOP
 
-def keyword_match(question: str, threshold: int = 2) -> str | None:
+def keyword_match(question: str, threshold: int = 1) -> str | None:
+    # FIX: threshold default 2→1 kiya taaki chote questions pe bhi kaam kare
     q_kw = get_keywords(question)
     if not q_kw:
         return None
@@ -178,9 +180,11 @@ def keyword_match(question: str, threshold: int = 2) -> str | None:
     for item in load_qa_database():
         s_kw    = get_keywords(item["question"])
         matches = len(q_kw & s_kw)
+
+        # FIX: score threshold 0.3→0.25 kiya — thoda flexible
         score   = matches / max(len(q_kw), len(s_kw), 1)
 
-        if matches >= threshold and score > best_score and score >= 0.3:
+        if matches >= threshold and score > best_score and score >= 0.25:
             best_score = score
             best_ans   = item["answer"]
             print(f"[KW] {score:.2f} m={matches}: {item['question'][:55]}")
@@ -279,23 +283,26 @@ def smart_query(question: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 3 — FAISS SEARCH ✅ ENABLED
+# STEP 3 — FAISS SEARCH
+# FIX: score threshold 1.5→1.8 kiya — thoda relaxed
+# FIX: top 3 results use kar rahe hain — better context
 # ══════════════════════════════════════════════════════════
 def faiss_search(question: str) -> str | None:
     try:
         sq      = smart_query(question)
-        results = get_vectorstore().similarity_search_with_score(sq, k=4)
+        results = get_vectorstore().similarity_search_with_score(sq, k=5)
 
-        # ✅ Score threshold 2.5 → 1.5 kiya — zyada strict matching
-        relevant = [(doc, score) for doc, score in results if score <= 1.5]
+        # FIX: 1.5 → 1.8 — pehle bahut strict tha, relevant chunks miss ho rahe the
+        relevant = [(doc, score) for doc, score in results if score <= 1.8]
 
         if not relevant:
-            print(f"[FAISS] No relevant results for '{sq[:50]}' (best score: {results[0][1]:.2f if results else 'N/A'})")
+            best = results[0][1] if results else "N/A"
+            print(f"[FAISS] No relevant results for '{sq[:50]}' (best score: {best:.2f if isinstance(best, float) else best})")
             return None
 
-        # ✅ Top 2 results ka context combine karo — better answer ke liye
-        ctx = "\n\n".join([doc.page_content for doc, _ in relevant[:2]])
-        print(f"[FAISS] '{sq[:50]}' → best score: {relevant[0][1]:.2f}")
+        # FIX: top 3 results combine karo — 2 se better context milega
+        ctx = "\n\n".join([doc.page_content for doc, _ in relevant[:3]])
+        print(f"[FAISS] '{sq[:50]}' → best score: {relevant[0][1]:.2f}, chunks used: {len(relevant[:3])}")
         return ctx
     except Exception as e:
         print(f"FAISS error: {e}")
@@ -303,29 +310,36 @@ def faiss_search(question: str) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# GROQ LLM ✅ ENABLED
+# GROQ LLM
+# FIX: temperature 0.1→0.2 — thoda flexible, better answers
+# FIX: history properly formatted
+# FIX: max_tokens 350→500 — better complete answers
 # ══════════════════════════════════════════════════════════
 def llm_answer(question: str, context: str, lang: str, history: str = "") -> str:
+
+    # FIX: history sirf tab add karo jab ho
+    history_section = f"\nPrevious conversation:\n{history}\n" if history.strip() else ""
 
     if lang == "hi":
         prompt = f"""Aap Diksha hain — GBPIET ke liye helpful AI chatbot.
 STRICT RULES:
 - HAMESHA shuddh Hindi mein jawab dein
 - Professor/Doctor ke liye "hain" use karein (hai NAHI)
-- Sirf context use karein
-- Answer nahi mila: "माफ़ कीजिए, मुझे यह जानकारी नहीं मिल पाई। क्या आप कृपया अपनी क्वेरी को दूसरे शब्दों में कह सकते हैं?"
+- Sirf neeche diye gaye context se jawab dein
+- Agar context mein jawab nahi hai: "माफ़ कीजिए, मुझे यह जानकारी नहीं मिल पाई। क्या आप कृपया अपनी क्वेरी को दूसरे शब्दों में कह सकते हैं?"
+- Apni taraf se kuch INVENT mat karein
 - Clear aur helpful jawab dein
-
-{history}
+{history_section}
 Context:
 {context}
+
 Sawaal: {question}
 Jawab (Hindi mein):"""
 
     elif lang == "ga":
         prompt = f"""Tum Diksha chho — GBPIET chatbot. Garhwali mein jawab do (Devanagari).
 Sirf context use karo. Nahi mila: "माफ करा, मी तैं त्वे सवाल समझ नि ऐ।"
-{history}
+{history_section}
 Context: {context}
 Sawaal: {question}
 Jawab:"""
@@ -333,7 +347,7 @@ Jawab:"""
     elif lang == "ku":
         prompt = f"""Tum Diksha chhu — GBPIET chatbot. Kumauni mein jawab do (Devanagari).
 Sirf context use karo. Nahi mila: "माफ करिया ! म्यर पास तस के जानकारी न्है़ंं!"
-{history}
+{history_section}
 Context: {context}
 Sawaal: {question}
 Jawab:"""
@@ -341,15 +355,15 @@ Jawab:"""
     else:
         prompt = f"""You are Diksha — a helpful AI assistant for GBPIET (Govind Ballabh Pant Institute of Engineering and Technology), Pauri Garhwal, Uttarakhand.
 
-RULES:
+STRICT RULES:
 - Reply in English only
 - Be respectful — use proper titles (Prof., Dr.)
-- Use ONLY the context below — do NOT use outside knowledge
-- If answer is not in context: "I'm sorry, I couldn't find that information. Could you please rephrase your query?"
+- Use ONLY the context below — do NOT use outside knowledge or guess
+- If answer is NOT clearly in context: "I'm sorry, I couldn't find that information. Could you please rephrase your query?"
 - Keep answer clear, accurate and helpful
 - Do NOT mix B.Tech info with MCA or M.Tech info
-
-{history}
+- Do NOT invent names, numbers or facts
+{history_section}
 Context:
 {context}
 
@@ -360,11 +374,14 @@ Answer:"""
         r = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Diksha, helpful multilingual AI assistant for GBPIET. Be respectful and accurate. Use ONLY the provided context."},
-                {"role": "user",   "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are Diksha, a helpful multilingual AI assistant for GBPIET. Be respectful and accurate. Use ONLY the provided context. Never guess or invent information."
+                },
+                {"role": "user", "content": prompt}
             ],
-            max_tokens=350,
-            temperature=0.1
+            max_tokens=500,       # FIX: 350→500 for complete answers
+            temperature=0.2,      # FIX: 0.1→0.2 slightly flexible
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
@@ -375,6 +392,7 @@ Answer:"""
 # ══════════════════════════════════════════════════════════
 # MAIN — Hybrid Search
 # Flow: Keywords → Exact → Keyword → FAISS + Groq → Fallback
+# FIX: keyword threshold logic improve kiya
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
@@ -392,13 +410,21 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         return ans
 
     # Step 2 — Keyword match
-    thresh = 2 if len(question.split()) <= 5 else 3
-    ans    = keyword_match(question, thresh)
+    # FIX: chote questions (<=4 words) ke liye threshold=1, bade ke liye=2
+    word_count = len(question.split())
+    if word_count <= 4:
+        thresh = 1
+    elif word_count <= 8:
+        thresh = 2
+    else:
+        thresh = 3
+
+    ans = keyword_match(question, thresh)
     if ans:
         print("[RESULT] Keyword match")
         return ans
 
-    # Step 3 — FAISS + Groq ✅ ENABLED
+    # Step 3 — FAISS + Groq
     ctx = faiss_search(question)
     if ctx:
         print("[RESULT] FAISS + Groq")
