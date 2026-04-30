@@ -1119,3 +1119,33 @@ const handleAdmissionSelect = (query, label) => {
     </>
   );
 }
+
+
+
+// URL ko clickable link mein convert karta hai
+function renderTextWithLinks(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, i) => {
+    if (urlRegex.test(part)) {
+      return (
+        
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: '#0a66c2',
+            fontWeight: 600,
+            textDecoration: 'none',
+            wordBreak: 'break-all'
+          }}
+        >
+          🌐 {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
