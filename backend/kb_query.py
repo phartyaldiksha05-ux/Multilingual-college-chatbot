@@ -394,13 +394,13 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         print("[RESULT] Keyword match")
         return ans
 
-    # Step 3 — FAISS + Groq (TEMPORARILY DISABLED — purana index galat answer deta tha)
-    # ctx = faiss_search(question)
-    # if ctx:
-    #     print("[RESULT] FAISS + Groq")
-    #     return llm_answer(question, ctx, lang, history)
+    Step 3 — FAISS + Groq (TEMPORARILY DISABLED — purana index galat answer deta tha)
+     ctx = faiss_search(question)
+     if ctx:
+         print("[RESULT] FAISS + Groq")
+         return llm_answer(question, ctx, lang, history)
 
-    # Fallback
+     Fallback
     print("[RESULT] Fallback")
     fb = {
         "hi": "माफ़ करें, मुझे यह जानकारी नहीं मिल पाई। कृपया अपना सवाल दूसरे शब्दों में पूछें।",
