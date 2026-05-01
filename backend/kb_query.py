@@ -402,7 +402,7 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     if ans:
         print("[RESULT] Keywords file match")
         return ans
-     q = question.lower()
+    q = question.lower()
 
     if "hod" in q or "head of department" in q:
         ans = keywords_file_match(question)
@@ -413,8 +413,7 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     # Step 1 — Exact match
     ans = exact_match(question)
 
-    # Step 1 — Exact match
-    ans = exact_match(question)
+
     if ans:
         print("[RESULT] Exact match")
         return ans
