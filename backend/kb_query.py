@@ -151,7 +151,6 @@ def exact_match(question: str) -> str | None:
 
 # ══════════════════════════════════════════════════════════
 # STEP 2 — KEYWORD MATCH
-# FIX: threshold aur scoring improve kiya
 # ══════════════════════════════════════════════════════════
 STOP = {
     'what','who','is','are','the','at','in','of','a','an','and','or',
@@ -169,7 +168,6 @@ def get_keywords(text: str) -> set:
     return (words | translated) - STOP
 
 def keyword_match(question: str, threshold: int = 1) -> str | None:
-    # FIX: threshold default 2→1 kiya taaki chote questions pe bhi kaam kare
     q_kw = get_keywords(question)
     if not q_kw:
         return None
@@ -180,8 +178,6 @@ def keyword_match(question: str, threshold: int = 1) -> str | None:
     for item in load_qa_database():
         s_kw    = get_keywords(item["question"])
         matches = len(q_kw & s_kw)
-
-        # FIX: score threshold 0.3→0.25 kiya — thoda flexible
         score   = matches / max(len(q_kw), len(s_kw), 1)
 
         if matches >= threshold and score > best_score and score >= 0.25:
@@ -193,7 +189,7 @@ def keyword_match(question: str, threshold: int = 1) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 3 — SMART FAISS ROUTING
+# SMART FAISS ROUTING
 # ══════════════════════════════════════════════════════════
 def smart_query(question: str) -> str:
     q  = question.lower()
@@ -283,24 +279,22 @@ def smart_query(question: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════
-# STEP 3 — FAISS SEARCH
-# FIX: score threshold 1.5→1.8 kiya — thoda relaxed
-# FIX: top 3 results use kar rahe hain — better context
+# FAISS SEARCH ✅ ENABLED
+# FIX: score 1.2 → 1.8 (1.2 bahut strict tha, results miss hote the)
+# FIX: k=5, top 3 chunks use karo
 # ══════════════════════════════════════════════════════════
 def faiss_search(question: str) -> str | None:
     try:
         sq      = smart_query(question)
         results = get_vectorstore().similarity_search_with_score(sq, k=5)
 
-        # FIX: 1.5 → 1.8 — pehle bahut strict tha, relevant chunks miss ho rahe the
-        relevant = [(doc, score) for doc, score in results if score <= 1.2]
+        relevant = [(doc, score) for doc, score in results if score <= 1.8]
 
         if not relevant:
             best = results[0][1] if results else "N/A"
             print(f"[FAISS] No relevant results for '{sq[:50]}' (best score: {best:.2f if isinstance(best, float) else best})")
             return None
 
-        # FIX: top 3 results combine karo — 2 se better context milega
         ctx = "\n\n".join([doc.page_content for doc, _ in relevant[:3]])
         print(f"[FAISS] '{sq[:50]}' → best score: {relevant[0][1]:.2f}, chunks used: {len(relevant[:3])}")
         return ctx
@@ -310,14 +304,14 @@ def faiss_search(question: str) -> str | None:
 
 
 # ══════════════════════════════════════════════════════════
-# GROQ LLM
-# FIX: temperature 0.1→0.2 — thoda flexible, better answers
-# FIX: history properly formatted
-# FIX: max_tokens 350→500 — better complete answers
+# GROQ LLM ✅ ENABLED
+# FIX: temperature 0.0 → 0.2
+# FIX: max_tokens 350 → 500
+# FIX: duplicate HOD check hataya
+# FIX: history sirf tab add hogi jab ho
 # ══════════════════════════════════════════════════════════
 def llm_answer(question: str, context: str, lang: str, history: str = "") -> str:
 
-    # FIX: history sirf tab add karo jab ho
     history_section = f"\nPrevious conversation:\n{history}\n" if history.strip() else ""
 
     if lang == "hi":
@@ -380,8 +374,8 @@ Answer:"""
                 },
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=500,       # FIX: 350→500 for complete answers
-            temperature=0.0,      # FIX: 0.1→0.2 slightly flexible
+            max_tokens=500,
+            temperature=0.2,
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
@@ -392,34 +386,23 @@ Answer:"""
 # ══════════════════════════════════════════════════════════
 # MAIN — Hybrid Search
 # Flow: Keywords → Exact → Keyword → FAISS + Groq → Fallback
-# FIX: keyword threshold logic improve kiya
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
 
-    # Step 0 — Keywords file match (SABSE PEHLE)
+    # Step 0 — Keywords file match
     ans = keywords_file_match(question)
     if ans:
         print("[RESULT] Keywords file match")
         return ans
-    q = question.lower()
-
-    if "hod" in q or "head of department" in q:
-        ans = keywords_file_match(question)
-        if ans:
-            return ans
-        return "I'm sorry, I couldn't find verified information."
 
     # Step 1 — Exact match
     ans = exact_match(question)
-
-
     if ans:
         print("[RESULT] Exact match")
         return ans
 
     # Step 2 — Keyword match
-    # FIX: chote questions (<=4 words) ke liye threshold=1, bade ke liye=2
     word_count = len(question.split())
     if word_count <= 4:
         thresh = 1
@@ -433,7 +416,7 @@ def get_answer(question: str, lang: str = "en", history: str = "") -> str:
         print("[RESULT] Keyword match")
         return ans
 
-    # Step 3 — FAISS + Groq
+    # Step 3 — FAISS + Groq ✅
     ctx = faiss_search(question)
     if ctx:
         print("[RESULT] FAISS + Groq")
