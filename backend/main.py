@@ -141,8 +141,8 @@ def load_faiss_background():
         print(f"FAISS load error: {e}")
 
 
-.on_event("startup")
-async def startup_event():
+@app.on_event("startup")
+async def startup():
     thread = threading.Thread(target=load_faiss_background, daemon=True)
     thread.start()
     print("Server started! FAISS loading in background...")
