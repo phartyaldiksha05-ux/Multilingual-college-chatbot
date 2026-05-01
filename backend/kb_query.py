@@ -293,7 +293,7 @@ def faiss_search(question: str) -> str | None:
         results = get_vectorstore().similarity_search_with_score(sq, k=5)
 
         # FIX: 1.5 → 1.8 — pehle bahut strict tha, relevant chunks miss ho rahe the
-        relevant = [(doc, score) for doc, score in results if score <= 1.8]
+        relevant = [(doc, score) for doc, score in results if score <= 1.2]
 
         if not relevant:
             best = results[0][1] if results else "N/A"
