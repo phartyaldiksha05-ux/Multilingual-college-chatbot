@@ -381,7 +381,7 @@ Answer:"""
                 {"role": "user", "content": prompt}
             ],
             max_tokens=500,       # FIX: 350→500 for complete answers
-            temperature=0.2,      # FIX: 0.1→0.2 slightly flexible
+            temperature=0.0,      # FIX: 0.1→0.2 slightly flexible
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
