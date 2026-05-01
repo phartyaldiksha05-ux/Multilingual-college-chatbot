@@ -1,1 +1,35 @@
 
+[
+  {
+    "keywords": ["hod of biotech", "hod biotech", "biotech hod", "biotechnology hod", "head of biotech", "head of biotechnology"],
+    "answer": "HOD of Biotechnology at GBPIET is Dr. Arun Bhatt (Associate Professor). Research areas: Genetics, Molecular Breeding, Plant Biotechnology, Genomics."
+  },
+  {
+    "keywords": ["hod of cse", "cse hod", "hod cse", "head of cse", "head of computer science"],
+    "answer": "HOD of CSE at GBPIET is Dr. Bhumika Gupta."
+  },
+  {
+    "keywords": ["hod of ece", "ece hod", "hod ece", "head of ece", "electronics hod"],
+    "answer": "HOD of ECE at GBPIET is Dr. Mahesh Kr. Agarwal."
+  },
+  {
+    "keywords": ["hod of mechanical", "mechanical hod", "hod mechanical", "me hod", "hod me"],
+    "answer": "HOD of Mechanical Engineering at GBPIET is Prof. K. K. S. Mer."
+  },
+  {
+    "keywords": ["hod of civil", "civil hod", "hod civil", "head of civil"],
+    "answer": "HOD of Civil Engineering at GBPIET is Dr. B. S. Khati."
+  },
+  {
+    "keywords": ["hod of electrical", "electrical hod", "hod electrical", "ee hod", "hod ee"],
+    "answer": "HOD of Electrical Engineering at GBPIET is Prof. Sanjay Gairola."
+  },
+  {
+    "keywords": ["hod of mca", "mca hod", "hod mca", "csa hod", "hod csa"],
+    "answer": "HOD of CSA/MCA at GBPIET is Prof. Priti Dimri."
+  },
+  {
+    "keywords": ["hod of applied sciences", "applied sciences hod", "hod applied", "applied hod"],
+    "answer": "HOD of Applied Sciences at GBPIET is Dr. B. S. Tewari."
+  }
+]
