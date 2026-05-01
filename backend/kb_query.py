@@ -389,6 +389,7 @@ Answer:"""
 # ══════════════════════════════════════════════════════════
 def get_answer(question: str, lang: str = "en", history: str = "") -> str:
     print(f"\n[Q/{lang}] {question}")
+    print(f"[DEBUG] Keywords extracted: {get_keywords(question)}")
 
     # Step 0 — Keywords file match
     ans = keywords_file_match(question)
