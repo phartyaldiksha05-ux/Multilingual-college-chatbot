@@ -177,19 +177,33 @@ def home():
 def health():
     return {"status": "ok"}
 
+# ✅ DEBUG ENDPOINT — FAISS chunks check karne ke liye
+@app.get("/debug")
+async def debug(q: str):
+    try:
+        from kb_query import smart_query, get_vectorstore
+        sq = smart_query(q)
+        results = get_vectorstore().similarity_search_with_score(sq, k=5)
+        return {
+            "original_query": q,
+            "smart_query": sq,
+            "results": [
+                {"chunk": doc.page_content[:200], "score": float(score)}
+                for doc, score in results
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.post("/tts")
 async def tts_endpoint(request: TTSRequest):
     audio = await run_in_threadpool(generate_voice, request.text, request.lang)
     return {"audio_base64": audio}
 
 
-# ONLY CHANGE THIS PART INSIDE /chat FUNCTION
-
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, req: Request):
 
-    # ✅ FIXED: lowercase hata diya
-    # Pehle .lower() tha, language detection bigaad sakta tha
     question = request.question.strip()
 
     if vectorstore is None:
@@ -205,7 +219,6 @@ async def chat(request: ChatRequest, req: Request):
     record_visit(ip)
     visit_data["chatbot_usage"] += 1
 
-    # ✅ Same language reply system
     if request.language and request.language in ['en', 'hi', 'ga', 'ku']:
         lang = request.language
     else:
