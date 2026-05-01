@@ -169,11 +169,11 @@ class HistoryResponse(BaseModel):
     messages:   List[dict]
 
 
-.get("/")
+@app.get("/")
 def home():
     return {"chatbot": "Diksha", "status": "running"}
 
-.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
 
